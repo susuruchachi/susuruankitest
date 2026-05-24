@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anki System - anki0.01.13-g</title>
+    <style>
+        :root {
+            --bg-color: #f5f7fb;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --primary-color: #4a90e2;
+            --border-color: #e1e4e8;
+            --success-color: #2ecc71;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .version {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            background: #e1e4e8;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            padding: 10px 20px;
+            border: none;
+            background: #ddd;
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .tab-btn.active {
+            background: var(--primary-color);
+            color: white;
+        }
+        .panel {
+            display: none;
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .panel.active {
+            display: block;
+        }
+        input, select, button {
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+        button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .friend-list, .category-list, .editor-list {
+            list-style: none;
+            padding: 0;
+        }
+        .friend-list li, .category-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .url-box {
+            background: #eee;
+            padding: 10px;
+            border-radius: 4px;
+            word-break: break-all;
+            margin-top: 10px;
+        }
+        .badge {
+            font-size: 0.8em;
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: white;
+        }
+        .badge.owner { background: #e74c3c; }
+        .badge.editor { background: #f39c12; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Anki System</h1>
+        <span class="version">anki0.01.13-g</span>
+    </header>
+
+    <!-- タブ切り替え -->
+    <div class="nav-tabs">
+        <button class="tab-btn active" onclick="switchTab('categories')">カテゴリー</button>
+        <button class="tab-btn" onclick="switchTab('friends')">フレンド機能</button>
+        <button class="tab-btn" onclick="switchTab('share-page')">共有カテゴリー一覧</button>
+    </div>
+
+    <!-- 既存ベース機能：カテゴリー管理パネル -->
+    <div id="categories" class="panel active">
+        <h2>マイカテゴリー</h2>
+        <input type="text" id="new-category-name" placeholder="新しいカテゴリー名">
+        <button onclick="createCategory()">作成</button>
+        <ul id="my-categories" class="category-list"></ul>
+    </div>
+
+    <!-- 新機能1：フレンドユーザー機能パネル -->
+    <div id="friends" class="panel">
+        <h2>フレンド管理</h2>
+        <div>
+            <input type="text" id="friend-id-input" placeholder="ユーザーIDを入力">
+            <button onclick="sendFriendRequest()">フレンド申請</button>
+        </div>
+        <h3>フレンド一覧</h3>
+        <ul id="friend-list" class="friend-list"></ul>
+    </div>
+
+    <!-- 新機能2：共有カテゴリー用専用管理ページ（権限設定・URL生成） -->
+    <div id="share-page" class="panel">
+        <h2>共有カテゴリー設定・一覧</h2>
+        <div>
+            <label for="select-category">カテゴリー選択: </label>
+            <select id="select-category" onchange="loadShareSettings()">
+                <option value="">-- 選択してください --</option>
+            </select>
+        </div>
+
+        <div id="share-settings-area" style="display:none; margin-top: 20px;">
+            <h3>共有URL (被りのないハッシュ形式)</h3>
+            <div class="url-box" id="share-url-display">URL未生成</div>
+            
+            <h3>編集権限の管理</h3>
+            <p style="font-size:0.9em; color:#666;">作成者、または許可されたフレンドのみがこのカテゴリーを編集（カードの追加等）できます。</p>
+            <ul id="editor-permission-list" class="editor-list"></ul>
+            <button onclick="savePermissions()">権限を保存</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 状態管理シミュレーション (ローカルストレージ代用)
+    const currentUser = "User_A";
+    let mockFriends = ["User_B", "User_C", "User_D"];
+    let categories = [
+        { id: "cat_01", name: "英語単語", owner: "User_A", hash: "a8f9b2c3d4", editors: ["User_B"] },
+        { id: "cat_02", name: "歴史年号", owner: "User_A", hash: "7e6d5c4b3a", editors: [] }
+    ];
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        event.currentTarget.classList.add('active');
+        init();
+    }
+
+    // 初期化表示
+    function init() {
+        // カテゴリー一覧表示
+        const catList = document.getElementById('my-categories');
+        catList.innerHTML = '';
+        categories.forEach(cat => {
+            catList.innerHTML += `<li><span>${cat.name}</span> <span class="badge owner">所有者</span></li>`;
+        });
+
+        // フレンド一覧表示
+        const friendList = document.getElementById('friend-list');
+        friendList.innerHTML = '';
+        mockFriends.forEach(f => {
+            friendList.innerHTML += `<li><span>${f}</span><button onclick="removeFriend('${f}')" style="background:#e74c3c">解除</button></li>`;
+        });
+
+        // 共有設定用セレクトボックス
+        const selectCat = document.getElementById('select-category');
+        const currentSelection = selectCat.value;
+        selectCat.innerHTML = '<option value="">-- 選択してください --</option>';
+        categories.forEach(cat => {
+            selectCat.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+        });
+        if(currentSelection) selectCat.value = currentSelection;
+    }
+
+    // カテゴリー作成
+    function createCategory() {
+        const nameInput = document.getElementById('new-category-name');
+        if(!nameInput.value) return;
+        const randomHash = Math.random().toString(16).substring(2, 12);
+        categories.push({
+            id: "cat_" + Date.now(),
+            name: nameInput.value,
+            owner: currentUser,
+            hash: randomHash,
+            editors: []
+        });
+        nameInput.value = '';
+        init();
+    }
+
+    // フレンド申請
+    function sendFriendRequest() {
+        const input = document.getElementById('friend-id-input');
+        if(!input.value) return;
+        if(mockFriends.includes(input.value)) {
+            alert('既にフレンドです');
+            return;
+        }
+        mockFriends.push(input.value);
+        alert(`${input.value} とフレンドになりました(シミュレート)`);
+        input.value = '';
+        init();
+    }
+
+    // 共有設定と権限データの読み込み
+    function loadShareSettings() {
+        const catId = document.getElementById('select-category').value;
+        const area = document.getElementById('share-settings-area');
+        if(!catId) {
+            area.style.display = 'none';
+            return;
+        }
+        area.style.display = 'block';
+
+        const cat = categories.find(c => c.id === catId);
+        
+        // URL表示 (完全な被りなしハッシュ)
+        const baseUrl = window.location.origin + window.location.pathname;
+        document.getElementById('share-url-display').innerText = `${baseUrl}?share=${cat.hash}`;
+
+        // フレンドごとの編集権限チェックボックス生成
+        const permissionList = document.getElementById('editor-permission-list');
+        permissionList.innerHTML = '';
+        
+        mockFriends.forEach(friend => {
+            const isChecked = cat.editors.includes(friend) ? 'checked' : '';
+            permissionList.innerHTML += `
+                <li>
+                    <label>
+                        <input type="checkbox" value="${friend}" ${isChecked}> ${friend} に編集を許可する
+                    </label>
+                </li>
+            `;
+        });
+    }
+
+    // 権限の保存
+    function savePermissions() {
+        const catId = document.getElementById('select-category').value;
+        const cat = categories.find(c => c.id === catId);
+        
+        const checkboxes = document.querySelectorAll('#editor-permission-list input[type="checkbox"]');
+        cat.editors = [];
+        checkboxes.forEach(cb => {
+            if(cb.checked) cat.editors.push(cb.value);
+        });
+        
+        alert('編集権限を更新しました。');
+        loadShareSettings();
+    }
+
+    // 初回実行
+    init();
+</script>
+
+</body>
+</html>
