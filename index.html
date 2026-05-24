@@ -1,293 +1,2148 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anki System - anki0.01.13-g</title>
-    <style>
-        :root {
-            --bg-color: #f5f7fb;
-            --card-bg: #ffffff;
-            --text-color: #333333;
-            --primary-color: #4a90e2;
-            --border-color: #e1e4e8;
-            --success-color: #2ecc71;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-        }
-        .version {
-            font-size: 0.9em;
-            color: #7f8c8d;
-            background: #e1e4e8;
-            padding: 4px 8px;
-            border-radius: 4px;
-        }
-        .nav-tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .tab-btn {
-            padding: 10px 20px;
-            border: none;
-            background: #ddd;
-            cursor: pointer;
-            border-radius: 5px;
-            font-weight: bold;
-        }
-        .tab-btn.active {
-            background: var(--primary-color);
-            color: white;
-        }
-        .panel {
-            display: none;
-            background: var(--card-bg);
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .panel.active {
-            display: block;
-        }
-        input, select, button {
-            padding: 8px;
-            margin: 5px 0;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-        }
-        button {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        button:hover {
-            opacity: 0.9;
-        }
-        .friend-list, .category-list, .editor-list {
-            list-style: none;
-            padding: 0;
-        }
-        .friend-list li, .category-list li {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .url-box {
-            background: #eee;
-            padding: 10px;
-            border-radius: 4px;
-            word-break: break-all;
-            margin-top: 10px;
-        }
-        .badge {
-            font-size: 0.8em;
-            padding: 2px 6px;
-            border-radius: 3px;
-            color: white;
-        }
-        .badge.owner { background: #e74c3c; }
-        .badge.editor { background: #f39c12; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>すするanki 0.01.15-g</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+/* ★長押し時のテキスト選択・システムメニューを完全ブロック */
+*, *::before, *::after { 
+  margin:0; padding:0; box-sizing:border-box; 
+  -webkit-tap-highlight-color: transparent; 
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+}
+:root {
+  --bg:     #080c14; --bg2:    #0f1724; --bg3:    #182030; --bg4:    #1e2940;
+  --border: #2a3a55; --border2:#3a4f72; --text:   #e8edf5; --text2:  #8a9bb8;
+  --text3:  #5a6e8a; --primary:#4f7cff; --primary2:#3a62e0; --accent: #7c3fff;
+  --success:#22c77a; --danger: #ff4f6a; --warn:   #f5a623;
+}
+body { 
+  background: var(--bg); color: var(--text); font-family: 'Noto Sans JP', sans-serif; 
+  overflow: hidden; position: fixed; width: 100%; 
+  user-select: none; -webkit-user-select: none; /* テキスト選択禁止 */
+}
+/* 入力欄だけは選択・編集を許可 */
+input, textarea, select { user-select: auto; -webkit-user-select: auto; font-family: inherit; color: inherit; -webkit-touch-callout: default; }
+
+/* ★高さを100dvh(動的ビューポート)にし、Safariのバー被りを防止 */
+.app-container { display: flex; flex-direction: column; height: 100dvh; width: 100vw; position: relative; }
+/* 下部メニューに隠れないようpadding-bottomを多めに確保、iPadスクロール改善 */
+.screen { flex: 1; display: none; flex-direction: column; overflow-y: auto; padding: 20px; padding-bottom: calc(110px + env(safe-area-inset-bottom)); touch-action: pan-y; overscroll-behavior-y: contain; }
+.screen.active { display: flex; }
+
+header { display: flex; align-items: center; justify-content: space-between; padding: 15px 20px; background: var(--bg2); border-bottom: 1px solid var(--border); z-index: 10; }
+.logo-area { display: flex; align-items: center; gap: 8px; }
+.logo-dot { width: 10px; height: 10px; background: var(--primary); border-radius: 50%; box-shadow: 0 0 10px var(--primary); }
+.logo-text { font-size: 1.1rem; font-weight: 900; letter-spacing: 1px; color: #fff; }
+.version-badge { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; background: var(--bg4); color: var(--text2); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border); }
+
+nav.bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 70px; background: rgba(15, 23, 36, 0.95); backdrop-filter: blur(10px); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+.nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text2); text-decoration: none; font-size: 0.75rem; font-weight: 500; cursor: pointer; transition: 0.2s; background: none; border: none; outline: none; width: 20%; }
+.nav-item i { font-size: 1.4rem; transition: 0.2s; }
+.nav-item.active { color: var(--primary); font-weight: 700; }
+.nav-item.active i { transform: translateY(-2px); color: var(--primary); }
+
+h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; color: #fff; }
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+.btn { background: var(--primary); color: #fff; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 700; font-size: 0.95rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; width: 100%; text-decoration: none; }
+.btn:active { background: var(--primary2); transform: scale(0.98); }
+.btn-secondary { background: var(--bg4); border: 1px solid var(--border); color: var(--text); }
+.btn-secondary:active { background: var(--bg3); }
+.btn-danger { background: var(--danger); }
+.btn-danger:active { background: #d63e55; }
+.btn-success { background: var(--success); }
+.btn-success:active { background: #1ca363; }
+
+.form-group { margin-bottom: 15px; }
+.form-group label { display: block; font-size: 0.85rem; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
+.form-control { width: 100%; background: var(--bg3); border: 1px solid var(--border); padding: 12px; border-radius: 8px; color: #fff; font-size: 0.95rem; transition: 0.2s; }
+.form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,124,255,0.15); }
+.form-row { display: flex; gap: 10px; }
+
+.tree-container { display: flex; flex-direction: column; gap: 8px; }
+.tree-group-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.tree-group-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: var(--bg3); cursor: pointer; transition: background 0.2s; }
+.tree-group-header:active { background: var(--bg4); }
+.tree-group-title { display: flex; align-items: center; gap: 10px; font-weight: 700; color: #fff; font-size: 0.95rem; flex:1; }
+.tree-group-arrow { font-size: 0.8rem; color: var(--text3); transition: transform 0.2s; padding: 5px; }
+.tree-group-card.expanded > .tree-group-header > .tree-group-arrow { transform: rotate(90px); }
+.tree-group-children { display: none; padding: 0; flex-direction: column; gap: 0; border-top: 1px solid rgba(42,58,85,0.4); }
+.tree-group-card.expanded > .tree-group-children { display: flex; }
+.tree-cat-count { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text3); background: var(--bg2); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border); margin-left: auto; }
+
+.ctx-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(4,6,10,0.7); backdrop-filter: blur(4px); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; }
+.menu-card { background: var(--bg2); border: 1px solid var(--border2); width: 100%; max-width: 340px; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); overflow: hidden; display: flex; flex-direction: column; max-height: 70vh; }
+.menu-header { padding: 14px 16px; background: var(--bg3); border-bottom: 1px solid var(--border); font-size: 0.85rem; font-weight: 700; color: var(--text2); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; text-align: center; }
+.menu-body { overflow-y: auto; flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 4px; touch-action: pan-y; overscroll-behavior-y: contain; }
+.menu-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; background: none; border: none; border-radius: 8px; text-align: left; font-size: 0.9rem; font-weight: 500; color: var(--text); cursor: pointer; transition: 0.2s; }
+.menu-item:active { background: var(--bg4); color: #fff; }
+.menu-item.danger { color: var(--danger); }
+.menu-item.danger:active { background: rgba(255,79,106,0.1); }
+.menu-sep { height: 1px; background: var(--border); margin: 6px 8px; }
+
+.list-header { margin-bottom: 15px; font-size: 0.85rem; color: var(--text2); display: flex; justify-content: space-between; align-items: center; }
+.q-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 10px; position: relative; transition: 0.2s; }
+.q-card-text { font-size: 0.95rem; font-weight: 700; margin-bottom: 6px; color: #fff; }
+.q-card-sub { font-size: 0.8rem; color: var(--text2); display: flex; gap: 10px; align-items: center; margin-top:8px;}
+.badge { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; padding: 1px 5px; border-radius: 4px; font-weight: 700; }
+.badge-level { background: rgba(79,124,255,0.15); color: var(--primary); border: 1px solid rgba(79,124,255,0.3); }
+.badge-grad { background: rgba(34,199,122,0.15); color: var(--success); border: 1px solid rgba(34,199,122,0.3); }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+.panel-stat { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; }
+.panel-num { font-family: 'JetBrains Mono', monospace; font-size: 1.4rem; font-weight: 900; color: #fff; margin-bottom: 2px; }
+.panel-label { font-size: 0.75rem; color: var(--text2); font-weight: 500; }
+
+.quiz-container { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+.quiz-header-status { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; margin-bottom: 15px; }
+.timer-bar-bg { width: 100%; height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; margin-bottom: 20px; border: 1px solid var(--border); }
+.timer-bar-fill { width: 100%; height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); transition: width 0.1s linear; }
+.timer-bar-fill.warning { background: var(--danger); }
+
+.question-display-box { background: var(--bg2); border: 1px solid var(--border2); border-radius: 14px; padding: 30px 20px; text-align: center; margin-bottom: 20px; position: relative; box-shadow: 0 8px 24px rgba(0,0,0,0.3); min-height: 140px; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+.q-text { font-size: 1.25rem; font-weight: 700; color: #fff; line-height: 1.5; word-break: break-all; }
+.hint-text { font-size: 0.85rem; color: var(--warn); margin-top: 10px; font-weight: 500; background: rgba(245,166,35,0.1); padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(245,166,35,0.2); animation: pulse 1.5s infinite; }
+
+.feedback-area { margin-top: 15px; padding: 12px; border-radius: 8px; text-align: center; font-weight: 700; font-size: 1rem; display: none; flex-direction: column; gap: 8px; }
+.feedback-area.correct { display: flex; background: rgba(34,199,122,0.15); color: var(--success); border: 1px solid rgba(34,199,122,0.3); }
+.feedback-area.incorrect { display: flex; background: rgba(255,79,106,0.15); color: var(--danger); border: 1px solid rgba(255,79,106,0.3); }
+.feedback-ans { font-size: 0.85rem; color: var(--text); font-weight: 400; margin-top: 2px; }
+
+.choice-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 15px; }
+.choice-btn { background: var(--bg3); border: 1px solid var(--border); padding: 14px 16px; border-radius: 10px; text-align: left; font-size: 0.95rem; font-weight: 500; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 10px; }
+.choice-btn:active:not(:disabled) { background: var(--bg4); border-color: var(--primary); }
+.choice-idx { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; background: var(--bg4); color: var(--text2); width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--border); }
+
+.achieve-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: 0.2s; }
+.achieve-row:active { background: var(--bg4); }
+.achieve-label { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: 500; }
+.achieve-count { font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; font-weight: 700; color: #fff; }
+
+.setting-box { border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 15px; background: rgba(24,32,48,0.4); }
+.setting-box-title { font-size: 0.8rem; font-weight: 700; color: var(--text2); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+
+@keyframes pulse { 0% { opacity: 0.8; } 50% { opacity: 1; } 100% { opacity: 0.8; } }
+
+/* クラウド同期ステータス表示 */
+.sync-status { position: fixed; top: 70px; right: 15px; background: rgba(30, 41, 64, 0.9); backdrop-filter: blur(5px); border: 1px solid var(--border); color: var(--text2); font-size: 0.75rem; font-weight: 700; padding: 6px 12px; border-radius: 20px; z-index: 1000; transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(0,0,0,0.3); pointer-events: none; }
+.sync-status.saving { color: var(--warn); border-color: var(--warn); }
+.sync-status.success { color: var(--success); border-color: var(--success); }
+.sync-status.error { color: var(--danger); border-color: var(--danger); }
+.sync-status.hidden { opacity: 0; transform: translateY(-10px); }
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
-<div class="container">
-    <header>
-        <h1>Anki System</h1>
-        <span class="version">anki0.01.13-g</span>
-    </header>
+<div class="app-container">
+  <div id="cloudSyncStatus" class="sync-status hidden">☁️ 待機中</div>
 
-    <!-- タブ切り替え -->
-    <div class="nav-tabs">
-        <button class="tab-btn active" onclick="switchTab('categories')">カテゴリー</button>
-        <button class="tab-btn" onclick="switchTab('friends')">フレンド機能</button>
-        <button class="tab-btn" onclick="switchTab('share-page')">共有カテゴリー一覧</button>
+  <header>
+    <div class="logo-area" onclick="openPage('pgHome')">
+      <div class="logo-dot"></div>
+      <div class="logo-text">すするanki</div>
     </div>
+    <div class="version-badge">v0.01.15-g</div>
+  </header>
 
-    <!-- 既存ベース機能：カテゴリー管理パネル -->
-    <div id="categories" class="panel active">
-        <h2>マイカテゴリー</h2>
-        <input type="text" id="new-category-name" placeholder="新しいカテゴリー名">
-        <button onclick="createCategory()">作成</button>
-        <ul id="my-categories" class="category-list"></ul>
-    </div>
-
-    <!-- 新機能1：フレンドユーザー機能パネル -->
-    <div id="friends" class="panel">
-        <h2>フレンド管理</h2>
-        <div>
-            <input type="text" id="friend-id-input" placeholder="ユーザーIDを入力">
-            <button onclick="sendFriendRequest()">フレンド申請</button>
+  <div id="pgHome" class="screen active">
+    <h2>🏠 クイズに挑戦</h2>
+    <div class="card">
+      <div class="setting-box-title">⚙️ クイズ設定</div>
+      <div class="form-group" id="scopeGroup">
+        <label>🎯 出題範囲（ドリルダウン選択）</label>
+        <div id="scopeSelectors" style="display:flex; flex-direction:column; gap:8px;"></div>
+      </div>
+      <div class="form-group">
+        <label>🗂️ 出題モード</label>
+        <select id="selQuizMode" class="form-control">
+          <option value="desc">📝 記述式入力モード</option>
+          <option value="choice">🎴 4択択一モード</option>
+          <option value="minhaya">⚡ みんはや形式 (1文字ずつ4択)</option>
+          <option value="tap">👆 文字タップモード (Duolingo風)</option>
+          <option value="self">🧠 自己申告モード (Anki風)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>⚡ 挑戦難易度 (制限時間/ヒント速度が一括適用されます)</label>
+        <select id="selQuizSpeed" class="form-control">
+          <option value="easy">🌱 やさしい (時間長め/ヒント最速)</option>
+          <option value="normal" selected>☕ 普通 (標準バランス)</option>
+          <option value="hard">🔥 難しい (時間厳格/ヒント遅め)</option>
+          <option value="expert">💀 すごい (超高速/ヒントなし)</option>
+        </select>
+      </div>
+      <div class="form-group" style="display:flex; align-items:center; gap:8px; margin-top:5px;">
+        <input type="checkbox" id="chkIncludeGrad" style="width:16px; height:16px; accent-color:var(--primary);">
+        <label for="chkIncludeGrad" style="margin-bottom:0; cursor:pointer;">🎓 卒業済みのカードも出題に含める</label>
+      </div>
+      <div class="form-group" style="display:flex; align-items:center; gap:8px; margin-top:5px;">
+        <input type="checkbox" id="chkSwapQA" style="width:16px; height:16px; accent-color:var(--accent);">
+        <label for="chkSwapQA" style="margin-bottom:0; cursor:pointer;">🔄 問題と答えを入れ替えて出題（逆引きモード）</label>
+      </div>
+      <div class="form-row" style="margin-top:15px;">
+        <div style="flex:1;">
+          <label style="display:block; font-size:0.75rem; color:var(--text2); margin-bottom:4px;">出題数</label>
+          <input type="number" id="numQCount" class="form-control" value="10" min="1">
         </div>
-        <h3>フレンド一覧</h3>
-        <ul id="friend-list" class="friend-list"></ul>
+        <div style="flex:1;">
+          <label style="display:block; font-size:0.75rem; color:var(--text2); margin-bottom:4px;">卒業認定正解数</label>
+          <input type="number" id="numGradThreshold" class="form-control" value="5" min="1">
+        </div>
+      </div>
     </div>
+    <button class="btn" onclick="startQuiz()"><i class="nav-item"></i>🚀 クイズをスタートする</button>
+    <button class="btn btn-secondary" style="margin-top:15px;" onclick="openPage('pgTutorial')">📖 使い方ガイドを見る</button>
+  </div>
 
-    <!-- 新機能2：共有カテゴリー用専用管理ページ（権限設定・URL生成） -->
-    <div id="share-page" class="panel">
-        <h2>共有カテゴリー設定・一覧</h2>
-        <div>
-            <label for="select-category">カテゴリー選択: </label>
-            <select id="select-category" onchange="loadShareSettings()">
-                <option value="">-- 選択してください --</option>
-            </select>
+  <div id="pgTutorial" class="screen">
+    <h2>📖 使い方ガイド</h2>
+    <div class="card">
+      <div class="setting-box-title">🔰 基本の3ステップ</div>
+      <div style="font-size:0.9rem; line-height:1.6; color:var(--text);">
+        <p style="margin-bottom:12px;"><strong>1. 📁 構造画面でフォルダーを作る</strong><br><span style="color:var(--text2); font-size:0.8rem;">長押しでフォルダーの中にさらにフォルダーを作れます。</span></p>
+        <p style="margin-bottom:12px;"><strong>2. 📝 問題箱で問題を追加する</strong><br><span style="color:var(--text2); font-size:0.8rem;">構造画面でフォルダー長押しから直接入れることも可能です。</span></p>
+        <p><strong>3. 🏠 ホームからクイズに挑戦！</strong><br><span style="color:var(--text2); font-size:0.8rem;">出題範囲を選ぶと、そのフォルダー内の全問題が出題されます。</span></p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="setting-box-title">💡 便利な隠し機能 (長押し)</div>
+      <p style="font-size:0.85rem; line-height:1.6; color:var(--text); margin-bottom:10px;">
+        画面内の色々な場所を<strong>「長押し」</strong>するとメニューが開きます。
+      </p>
+      <ul style="font-size:0.8rem; line-height:1.6; color:var(--text2); padding-left:20px;">
+        <li style="margin-bottom:6px;"><strong>構造画面のフォルダー：</strong><br>サブフォルダー作成、移動、<span style="color:#fff;">問題の一括追加</span>、エクスポートなど</li>
+        <li style="margin-bottom:4px;"><strong>問題箱の各カード：</strong><br>問題の編集、別フォルダーへの移動、削除</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="setting-box-title">✨ 解答のコツ (記述式)</div>
+      <p style="font-size:0.85rem; line-height:1.6; color:var(--text);">
+        全角・半角の違いは自動で吸収されます。<br>また、答えに「りんご, みかん」のようにカンマや読点、<strong>半角・全角スペース</strong>が含まれる場合、順番が「みかん りんご」と逆に入力しても正解として判定されます！
+      </p>
+    </div>
+    <button class="btn btn-secondary" style="margin-top:10px;" onclick="openPage('pgHome')">🏠 ホームに戻る</button>
+  </div>
+
+  <div id="pgTree" class="screen">
+    <h2>📁 構造エクスプローラー</h2>
+    <div class="form-group form-row" style="margin-bottom:20px;">
+      <input type="text" id="txtNewRoot" class="form-control" placeholder="新しい大元のフォルダーを作成...">
+      <button class="btn" style="width:auto; padding:0 16px;" onclick="addNewRootCategory()">作成</button>
+    </div>
+    <div class="tree-container" id="treeRoot"></div>
+  </div>
+
+  <div id="pgBox" class="screen">
+    <h2 id="boxTitle">📝 問題カード箱</h2>
+    <div class="form-group form-row" style="margin-bottom: 15px;">
+      <input type="text" id="txtSearchBox" class="form-control" placeholder="問題や答えを検索..." oninput="renderBox()">
+      <button class="btn btn-secondary" style="width:auto; padding:0 16px; white-space:nowrap;" onclick="showAllCards()">全表示</button>
+    </div>
+    <div class="list-header">
+      <span id="lblBoxCount">0件のカード</span>
+      <button class="btn btn-secondary" style="width:auto; padding:4px 10px; font-size:0.8rem; height:30px;" onclick="showAddQModal()">➕ 新規追加</button>
+    </div>
+    <div id="boxList"></div>
+  </div>
+
+  <div id="pgQuizPlayer" class="screen">
+    <div class="quiz-container">
+      <div>
+        <div class="quiz-header-status">
+          <span id="lblQuizProgress" style="font-family:'JetBrains Mono',monospace; font-weight:700;">Q 1/10</span>
+          <span id="lblQuizTimerText" style="font-family:'JetBrains Mono',monospace; font-weight:700; color:var(--primary);">--.-s</span>
+        </div>
+        <div class="timer-bar-bg">
+          <div id="barTimerFill" class="timer-bar-fill"></div>
+        </div>
+        <div class="question-display-box">
+          <div id="lblQuizQuestion" class="q-text">Loading...</div>
+          <div id="lblQuizHint" class="hint-text" style="display:none;"></div>
         </div>
 
-        <div id="share-settings-area" style="display:none; margin-top: 20px;">
-            <h3>共有URL (被りのないハッシュ形式)</h3>
-            <div class="url-box" id="share-url-display">URL未生成</div>
-            
-            <h3>編集権限の管理</h3>
-            <p style="font-size:0.9em; color:#666;">作成者、または許可されたフレンドのみがこのカテゴリーを編集（カードの追加等）できます。</p>
-            <ul id="editor-permission-list" class="editor-list"></ul>
-            <button onclick="savePermissions()">権限を保存</button>
+        <div id="quizFeedback" class="feedback-area">
+          <div id="feedbackResultText">正解！</div>
+          <div id="feedbackAnswerText" class="feedback-ans"></div>
         </div>
+
+        <div id="boxChoiceArea" class="choice-grid" style="display:none;"></div>
+
+        <div id="boxDescArea" class="form-group" style="display:none; margin-bottom:15px;">
+          <input type="text" id="txtDescAnswer" class="form-control" placeholder="答えを入力してください..." autocomplete="off" style="text-align:center; font-size:1.1rem; height:50px;">
+        </div>
+
+        <div id="boxTapArea" style="display:none; margin-bottom:15px;">
+          <div id="tapInputArea" style="min-height:50px; background:var(--bg3); border:1px solid var(--border); border-radius:8px; display:flex; align-items:center; justify-content:center; gap:5px; flex-wrap:wrap; padding:10px; margin-bottom:15px;" onclick="removeLastTap()"></div>
+          <div id="tapChoiceArea" style="display:flex; flex-wrap:wrap; justify-content:center; gap:8px;"></div>
+        </div>
+
+        <div id="boxMinhayaArea" style="display:none; margin-bottom:15px;"></div>
+
+        <div id="boxSelfArea" style="display:none; margin-bottom:15px; text-align:center;">
+          <button id="btnShowAnswer" class="btn btn-secondary" onclick="showSelfAnswer()" style="width:100%;">👀 答えを見る</button>
+          <div id="selfJudgeArea" style="display:none; margin-top:15px;">
+            <div style="font-size:1.1rem; font-weight:bold; margin-bottom:15px; color:#fff;" id="selfAnswerDisplay"></div>
+            <div class="form-row">
+              <button class="btn btn-danger" onclick="submitSelfMode('miss')">❌ ミス</button>
+              <button class="btn btn-secondary" onclick="submitSelfMode('good')">△ 普通</button>
+              <button class="btn btn-success" onclick="submitSelfMode('perfect')">⭕ 完璧</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-top:15px;">
+        <button id="btnQuizPass" class="btn btn-secondary" style="flex:1;" onclick="passQuizQuestion()">🏳️ パス</button>
+        <button id="btnQuizAction" class="btn" style="flex:2;" onclick="submitQuizAction()">確定する</button>
+      </div>
     </div>
+  </div>
+
+  <div id="pgStats" class="screen">
+    <h2>📊 習熟実績スタッツ</h2>
+    <div class="grid-2">
+      <div class="panel-stat"><div class="panel-num" id="statTotal">0</div><div class="panel-label">総カード数</div></div>
+      <div class="panel-stat"><div class="panel-num" id="statGradRatio">0%</div><div class="panel-label">卒業達成率</div></div>
+    </div>
+    <div class="card" style="padding:10px;">
+      <div class="achieve-row" onclick="filterBoxByStatus('grad')">
+        <div class="achieve-label"><span style="color:var(--success);">🎓</span> 卒業 (超安定)</div>
+        <div class="achieve-count" id="cntGrad">0</div>
+      </div>
+      <div class="achieve-row" onclick="filterBoxByStatus('master')">
+        <div class="achieve-label"><span style="color:var(--primary);">⚡</span> 得意 (レベル3以上)</div>
+        <div class="achieve-count" id="cntMaster">0</div>
+      </div>
+      <div class="achieve-row" onclick="filterBoxByStatus('normal')">
+        <div class="achieve-label"><span style="color:var(--text);">☕</span> 普通 (レベル1~2)</div>
+        <div class="achieve-count" id="cntNormal">0</div>
+      </div>
+      <div class="achieve-row" onclick="filterBoxByStatus('weak')">
+        <div class="achieve-label"><span style="color:var(--warn);">⚠️</span> 苦手 (レベル0)</div>
+        <div class="achieve-count" id="cntWeak">0</div>
+      </div>
+      <div class="achieve-row" onclick="filterBoxByStatus('shikkari')">
+        <div class="achieve-label"><span style="color:var(--danger);">🧱</span> しっかり (要反復)</div>
+        <div class="achieve-count" id="cntShikkari">0</div>
+      </div>
+      <div class="achieve-row" onclick="filterBoxByStatus('unseen')">
+        <div class="achieve-label"><span style="color:var(--text3);">💤</span> 未着手 (学習前)</div>
+        <div class="achieve-count" id="cntUnseen">0</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="pgBackup" class="screen">
+    <h2>💾 クラウド同期・入出力管理</h2>
+    
+    <div class="card">
+      <div class="setting-box-title">☁️ Firebase クラウド連携 (Google同期)</div>
+      <div id="fbLoginState" style="margin-bottom: 10px; font-size: 0.85rem; color: var(--warn); font-weight: bold;">ログインしていません</div>
+      <button class="btn btn-secondary" id="btnFbLogin" onclick="firebaseLogin()">🔑 Googleアカウントでログイン</button>
+      <button class="btn btn-secondary" id="btnFbLogout" style="display:none;" onclick="firebaseLogout()">🚪 ログアウト</button>
+      <button class="btn btn-success" style="margin-top:10px;" onclick="syncToCloud(false)">☁️ クラウドと双方向マージ同期</button>
+    </div>
+
+    <div class="card" style="margin-top:15px;">
+      <div class="setting-box-title">👥 フレンド・チャット機能 (要ログイン)</div>
+      <p style="font-size:0.8rem; color:var(--text2); margin-bottom:12px; line-height:1.5;">
+        フレンドを登録して一覧で管理したり、チャットで会話することができます。共有カテゴリーの共同編集にも便利です。
+      </p>
+      <button class="btn" style="margin-bottom: 15px; background: var(--accent);" onclick="openPage('pgFriends'); loadAppFriends();">💬 フレンド一覧・チャットを開く</button>
+      
+      <div style="margin-bottom: 5px;">
+        <label style="font-size:0.8rem; color:var(--text2); display:block; margin-bottom:4px;">あなたのUID (友達に教える用):</label>
+        <input type="text" id="txtMyUid" class="form-control" readonly placeholder="ログインすると表示されます" style="margin-bottom: 5px;">
+        <button class="btn btn-secondary" onclick="copyMyUid()">📋 あなたのUIDをコピー</button>
+      </div>
+    </div>
+
+    <div class="setting-box">
+      <div class="setting-box-title">📦 JSON 形式バックアップ</div>
+      <button class="btn btn-secondary" style="margin-bottom:10px;" onclick="exportJSON()">JSONファイルをエクスポート</button>
+      <input type="file" id="fileJSON" accept=".json" style="display:none;" onchange="importJSON(event)">
+      <button class="btn btn-secondary" onclick="document.getElementById('fileJSON').click()">JSONファイルからインポート</button>
+    </div>
+
+    <div class="setting-box">
+      <div class="setting-box-title">📊 CSV 形式バックアップ</div>
+      <button class="btn btn-secondary" style="margin-bottom:10px;" onclick="exportCSV()">CSVファイルをエクスポート</button>
+      <input type="file" id="fileCSV" accept=".csv, text/csv" style="display:none;" onchange="importCSV(event)">
+      <button class="btn btn-secondary" onclick="document.getElementById('fileCSV').click()">CSVファイルからインポート</button>
+    </div>
+
+    <button class="btn btn-danger" style="margin-top:15px;" onclick="factoryReset()">🚨 全データを初期化</button>
+  </div>
+
+  <div id="pgFriends" class="screen">
+    <h2>👥 フレンド管理・チャット</h2>
+    
+    <div id="friendsListArea" style="flex:1; display:flex; flex-direction:column;">
+      <div class="card" style="margin-bottom:15px;">
+        <div class="setting-box-title">🤝 新しいフレンドを追加</div>
+        <p style="font-size:0.75rem; color:var(--text2); margin-bottom:8px;">友達から教えてもらったUIDを入力して登録します。</p>
+        <div class="form-row">
+          <input type="text" id="txtAddFriendUid" class="form-control" placeholder="友達のUIDを入力">
+          <button class="btn" style="width:auto; padding:0 15px; background:var(--accent);" onclick="addAppFriend()">追加</button>
+        </div>
+      </div>
+
+      <h3 style="font-size: 1.1rem; font-weight: 700; margin: 10px 0; color: #fff;">📜 フレンド一覧</h3>
+      <div id="appFriendsList" style="flex:1; overflow-y:auto;">
+        <p style="color:var(--text3); font-size:0.8rem;">読み込み中...</p>
+      </div>
+      <button class="btn btn-secondary" style="margin-top:15px;" onclick="openPage('pgBackup')">戻る</button>
+    </div>
+
+    <div id="chatArea" style="display:none; flex-direction:column; height: 100%;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h3 id="chatWithTitle" style="font-size:1.1rem; font-weight:bold; color:#fff;">Chat</h3>
+        <button class="btn btn-secondary" style="width:auto; padding:4px 10px; font-size:0.8rem;" onclick="closeChat()">一覧に戻る</button>
+      </div>
+      <div id="chatMessages" style="flex:1; overflow-y:auto; background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:15px; display:flex; flex-direction:column; gap:10px; margin-bottom:10px;">
+      </div>
+      <div class="form-row">
+        <input type="text" id="txtChatInput" class="form-control" placeholder="メッセージを入力..." onkeypress="if(event.key === 'Enter') sendChatMessage()">
+        <button class="btn" style="width:auto; padding:0 15px; background:var(--primary);" onclick="sendChatMessage()">送信</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="pgShared" class="screen">
+    <h2 id="sharedTitle">🌐 共有カテゴリー</h2>
+    <div class="card" style="margin-bottom: 15px;">
+      <div style="font-size:0.85rem; color:var(--text2); margin-bottom: 10px;">
+        作成者: <span id="sharedOwnerName" style="color:#fff; font-weight:bold;">--</span>
+      </div>
+      <button class="btn btn-success" onclick="importCurrentShared()">📥 このカテゴリーを自分のアプリに取り込む</button>
+      <button class="btn btn-secondary" style="margin-top:10px;" onclick="exitSharedMode()">🏠 閉じてホームに戻る</button>
+    </div>
+
+    <div class="card" id="sharedOwnerPanel" style="display:none; border-color: var(--accent);">
+      <div class="setting-box-title" style="color: var(--accent);">👑 管理者メニュー (共同編集者の設定)</div>
+      <p style="font-size:0.8rem; color:var(--text2); margin-bottom:10px;">編集を許可したい友達からUIDを教えてもらい、追加してください。（※フレンド一覧から追加済みなら自動反映されます）</p>
+      <div class="form-row">
+        <input type="text" id="txtNewFriendUid" class="form-control" placeholder="友達のUIDを入力">
+        <button class="btn" style="width:auto; padding:0 15px; background:var(--accent);" onclick="addFriendToShared()">許可</button>
+      </div>
+      <div id="sharedFriendsList" style="margin-top: 10px; display:flex; flex-direction:column; gap:5px;"></div>
+    </div>
+
+    <div class="card" id="sharedEditorPanel" style="display:none; border-color: var(--primary);">
+      <div class="setting-box-title" style="color: var(--primary);">📝 共同編集: 新しい問題の追加</div>
+      <div class="form-group">
+        <input type="text" id="txtSharedNewQ" class="form-control" placeholder="問題文">
+      </div>
+      <div class="form-group">
+        <input type="text" id="txtSharedNewA" class="form-control" placeholder="答え">
+      </div>
+      <button class="btn" onclick="addCardToShared()">➕ クラウドに直接追加する</button>
+    </div>
+
+    <h3 style="font-size: 1.1rem; font-weight: 700; margin: 20px 0 10px 0; color: #fff;">🗂️ 収録カード一覧 (<span id="sharedCardCount">0</span>)</h3>
+    <div id="sharedCardsList"></div>
+  </div>
+
+  <nav class="bottom-nav">
+    <button class="nav-item active" id="navHome" onclick="openPage('pgHome')"><i>🏠</i>クイズ</button>
+    <button class="nav-item" id="navTree" onclick="openPage('pgTree')"><i>📁</i>構造</button>
+    <button class="nav-item" id="navBox" onclick="openPage('pgBox')"><i>📝</i>問題箱</button>
+    <button class="nav-item" id="navStats" onclick="openPage('pgStats')"><i>📊</i>実績</button>
+    <button class="nav-item" id="navBackup" onclick="openPage('pgBackup')"><i>💾</i>管理</button>
+  </nav>
+</div>
+
+<div class="ctx-overlay" id="bulkAddOverlay" style="display:none;" onclick="closeBulkAdd()">
+  <div class="menu-card" style="padding:20px; max-width:90%; width:400px;" onclick="event.stopPropagation()">
+    <h3 style="color:#fff; margin-bottom:10px; font-size:1.1rem;" id="bulkAddTitle">一括追加</h3>
+    <textarea id="txtBulkAdd" class="form-control" style="height:150px; margin-bottom:15px; font-family:'JetBrains Mono', monospace; font-size:0.85rem;" placeholder="問題,答え(カンマ、読点、スペース区切り)&#10;問題,答え"></textarea>
+    <div class="form-row">
+      <button class="btn btn-secondary" style="flex:1;" onclick="closeBulkAdd()">キャンセル</button>
+      <button class="btn" style="flex:1;" onclick="submitBulkAdd()">追加する</button>
+    </div>
+  </div>
+</div>
+
+<div class="ctx-overlay" id="ctxOverlay" onclick="closeContextMenu()">
+  <div class="menu-card" id="ctxCard" onclick="event.stopPropagation()">
+    <div class="menu-header" id="ctxHeader">メニュー</div>
+    <div class="menu-body" id="ctxBody"></div>
+  </div>
 </div>
 
 <script>
-    // 状態管理シミュレーション (ローカルストレージ代用)
-    const currentUser = "User_A";
-    let mockFriends = ["User_B", "User_C", "User_D"];
-    let categories = [
-        { id: "cat_01", name: "英語単語", owner: "User_A", hash: "a8f9b2c3d4", editors: ["User_B"] },
-        { id: "cat_02", name: "歴史年号", owner: "User_A", hash: "7e6d5c4b3a", editors: [] }
-    ];
+const firebaseConfig = {
+  apiKey: "AIzaSyAGoYBRoupEFHng_cXoiHmZf9eAlX8ZCHA",
+  authDomain: "susuruanki.firebaseapp.com",
+  projectId: "susuruanki",
+  storageBucket: "susuruanki.firebasestorage.app",
+  messagingSenderId: "926791749187",
+  appId: "1:926791749187:web:2a96a39d61cbb4d3c7cef6",
+  measurementId: "G-Q9ZMYX8BF8"
+};
 
-    function switchTab(tabId) {
-        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(tabId).classList.add('active');
-        event.currentTarget.classList.add('active');
-        init();
+if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+const auth = firebase.auth();
+const firestore = firebase.firestore();
+let currentUser = null;
+let syncTimeout = null;
+
+// ★ モバイル(PWA・iOS)でのログイン維持問題を解決するため、Popup方式に戻しエラーを親切に補足
+function firebaseLogin() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(err => { 
+    if (err.code === 'auth/popup-blocked') {
+      alert("ポップアップがブロックされました。ブラウザの設定でポップアップを許可するか、一度Safari等の標準ブラウザで開いてからお試しください。");
+    } else {
+      alert("ログインエラー: " + err.message); 
     }
+  });
+}
 
-    // 初期化表示
-    function init() {
-        // カテゴリー一覧表示
-        const catList = document.getElementById('my-categories');
-        catList.innerHTML = '';
-        categories.forEach(cat => {
-            catList.innerHTML += `<li><span>${cat.name}</span> <span class="badge owner">所有者</span></li>`;
-        });
+auth.onAuthStateChanged((user) => {
+  currentUser = user;
+  const loginState = document.getElementById('fbLoginState');
+  const btnLogin = document.getElementById('btnFbLogin');
+  const btnLogout = document.getElementById('btnFbLogout');
+  
+  if (loginState) {
+    if (user) {
+      loginState.innerHTML = `<span style="color:var(--success);">✅ ログイン中: ${escapeHtml(user.displayName || user.email)}</span>`;
+      btnLogin.style.display = 'none';
+      btnLogout.style.display = 'inline-flex';
+      document.getElementById('txtMyUid').value = user.uid; // フレンド用UIDセット
+      syncToCloud(true);
 
-        // フレンド一覧表示
-        const friendList = document.getElementById('friend-list');
-        friendList.innerHTML = '';
-        mockFriends.forEach(f => {
-            friendList.innerHTML += `<li><span>${f}</span><button onclick="removeFriend('${f}')" style="background:#e74c3c">解除</button></li>`;
-        });
+      // プロフィール（表示名とUID）をFirestoreに自動登録してフレンド機能で名前が出るようにする
+      firestore.collection('susuru_anki_profiles').doc(user.uid).set({
+        displayName: user.displayName || user.email || '名無しユーザー',
+        uid: user.uid
+      }, { merge: true });
 
-        // 共有設定用セレクトボックス
-        const selectCat = document.getElementById('select-category');
-        const currentSelection = selectCat.value;
-        selectCat.innerHTML = '<option value="">-- 選択してください --</option>';
-        categories.forEach(cat => {
-            selectCat.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
-        });
-        if(currentSelection) selectCat.value = currentSelection;
+      // もし共有ページを開いていて権限待ち状態なら再描画
+      if (currentSharedDocId) listenToSharedDoc(currentSharedDocId);
+    } else {
+      loginState.innerHTML = `<span style="color:var(--warn);">ログインしていません</span>`;
+      btnLogin.style.display = 'inline-flex';
+      btnLogout.style.display = 'none';
+      document.getElementById('txtMyUid').value = "";
     }
+  }
+});
 
-    // カテゴリー作成
-    function createCategory() {
-        const nameInput = document.getElementById('new-category-name');
-        if(!nameInput.value) return;
-        const randomHash = Math.random().toString(16).substring(2, 12);
-        categories.push({
-            id: "cat_" + Date.now(),
-            name: nameInput.value,
-            owner: currentUser,
-            hash: randomHash,
-            editors: []
+function firebaseLogout() { auth.signOut().then(() => { alert("ログアウトしました"); }); }
+
+const STORAGE_KEY = 'susuru_anki_017g';
+let db = [];
+let categories = ["未分類"];
+let categoryTree = {}; // 階層無制限に変更 (親名 -> 子配列)
+
+let currentViewContext = 'all';
+let pageHistory = [];
+let quizPool = [];
+let quizIndex = 0;
+let quizTimer = null;
+let autoNextTimeout = null;
+let quizTimeLimit = 0;
+let quizTimeLeft = 0;
+let quizPhase = 'q';
+let selectedChoiceIdx = null;
+let currentQuestionGradThreshold = 5;
+let selectedScopePath = []; // ★ドリルダウンのパス保持用
+
+// ★全角半角・順序揺れ・スペース区切りを吸収する解答正規化機能
+function normalizeAnswer(str) {
+  if(!str) return '';
+  let s = String(str).replace(/[Ａ-Ｚａ-ｚ０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).toLowerCase().trim();
+  s = s.replace(/[、，／/ \u3000]+/g, ',');
+  return s.split(',').map(x => x.trim()).filter(x => x !== '').sort().join(',');
+}
+
+// 一括追加
+let targetBulkCategory = "";
+function showBulkAddModal(catName) {
+  targetBulkCategory = catName;
+  document.getElementById('bulkAddTitle').innerText = `一括追加: ${catName}`;
+  document.getElementById('txtBulkAdd').value = '';
+  document.getElementById('bulkAddOverlay').style.display = 'flex';
+}
+function closeBulkAdd() { document.getElementById('bulkAddOverlay').style.display = 'none'; }
+function submitBulkAdd() {
+  const text = document.getElementById('txtBulkAdd').value.trim();
+  if(!text) { closeBulkAdd(); return; }
+  let count = 0;
+  text.split(/\r?\n/).forEach(line => {
+    let idx = line.indexOf(',');
+    if(idx === -1) idx = line.indexOf('、');
+    if(idx !== -1) {
+      const q = line.substring(0, idx).trim();
+      const a = line.substring(idx + 1).trim();
+      if(q && a) {
+        db.push({
+          id: 'id_' + Math.random().toString(36).slice(2) + Date.now().toString(36),
+          question: q, answer: a, category: targetBulkCategory,
+          level: 0, correct: 0, incorrect: 0, streak: 0, wrongStreak: 0, shikkariStreak: 0
         });
-        nameInput.value = '';
-        init();
+        count++;
+      }
     }
+  });
+  autoMerge();
+  alert(`${count}件の問題を追加しました！`);
+  closeBulkAdd();
+  if (document.getElementById('pgBox').classList.contains('active')) renderBox();
+  if (document.getElementById('pgTree').classList.contains('active')) renderTree();
+}
 
-    // フレンド申請
-    function sendFriendRequest() {
-        const input = document.getElementById('friend-id-input');
-        if(!input.value) return;
-        if(mockFriends.includes(input.value)) {
-            alert('既にフレンドです');
-            return;
+window.onload = function() {
+  loadData();
+  autoMerge();
+  buildQuizScopeDropdown();
+  history.pushState({ page: 'pgHome' }, '', '');
+  window.onpopstate = function(event) {
+    if (pageHistory.length > 0) executePageTransition(pageHistory.pop(), true);
+    else executePageTransition('pgHome', true);
+  };
+
+  // ★ URL共有の検知
+  const urlParams = new URLSearchParams(window.location.search);
+  const shareId = urlParams.get('share_id');
+  if (shareId) {
+    openPage('pgShared');
+    listenToSharedDoc(shareId);
+  }
+};
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) {
+      const parsed = JSON.parse(raw);
+      if(parsed.db) db = parsed.db;
+      if(parsed.categories) categories = parsed.categories;
+      if(parsed.categoryTree) categoryTree = parsed.categoryTree;
+    }
+  } catch(e) { console.error("ローカル復元失敗:", e); }
+  ensureSystemSanity();
+}
+
+function saveData() {
+  ensureSystemSanity();
+  const payload = { db, categories, categoryTree };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  if (currentUser) {
+    clearTimeout(syncTimeout);
+    setSyncStatus('saving', '🔄 保存中...');
+    syncTimeout = setTimeout(() => backgroundCloudSave(payload), 1000);
+  }
+}
+
+function setSyncStatus(state, text) {
+  const el = document.getElementById('cloudSyncStatus');
+  if(!el) return;
+  el.className = `sync-status ${state}`;
+  el.innerText = text;
+  if (state === 'success' || state === 'error') setTimeout(() => el.classList.add('hidden'), 3000);
+}
+
+async function backgroundCloudSave(payload) {
+  try {
+    await firestore.collection("susuru_anki_users").doc(currentUser.uid).set({
+      version: "0.01.15-g", db: payload.db, categories: payload.categories,
+      categoryTree: payload.categoryTree, lastSync: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    setSyncStatus('success', '✅ 保存完了');
+  } catch (err) { setSyncStatus('error', '⚠️ 保存エラー'); }
+}
+
+function ensureSystemSanity() {
+  for (let parent in categoryTree) {
+    if (!categories.includes(parent)) categories.push(parent);
+  }
+  if (!categories.includes("未分類")) categories.push("未分類");
+  categories = [...new Set(categories.filter(c => c && c.trim() !== ""))];
+
+  const activeCatsInTree = new Set();
+  for (let p in categoryTree) {
+    (categoryTree[p] || []).forEach(c => activeCatsInTree.add(c));
+  }
+  categories = categories.filter(c => activeCatsInTree.has(c) || getTopLevelCategories().includes(c));
+
+  db = db.filter(i => i && i.question && i.question.toString().trim() !== "" && i.answer && i.answer.toString().trim() !== "");
+  db.forEach(item => {
+    if(!item.id) item.id = 'id_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    if(!item.category || !categories.includes(item.category)) {
+      item.category = item.group && categories.includes(item.group) ? item.group : "未分類";
+    }
+    if(item.level === undefined) item.level = 0;
+    if(item.correct === undefined) item.correct = 0;
+    if(item.incorrect === undefined) item.incorrect = 0;
+    if(item.streak === undefined) item.streak = 0;
+    if(item.wrongStreak === undefined) item.wrongStreak = 0;
+    if(item.shikkariStreak === undefined) item.shikkariStreak = 0;
+  });
+}
+
+function autoMerge() {
+  let mergedMap = new Map();
+  db.forEach(item => {
+    let safeCat = item.category ? String(item.category).trim() : "未分類";
+    let key = `${safeCat}_${String(item.question).trim()}_${String(item.answer).trim()}`;
+    if (!mergedMap.has(key)) {
+      mergedMap.set(key, JSON.parse(JSON.stringify(item)));
+    } else {
+      let ext = mergedMap.get(key);
+      ext.correct = (Number(ext.correct)||0) + (Number(item.correct)||0);
+      ext.incorrect = (Number(ext.incorrect)||0) + (Number(item.incorrect)||0);
+      ext.level = Math.max(Number(ext.level)||0, Number(item.level)||0);
+      ext.streak = Math.max(Number(ext.streak)||0, Number(item.streak)||0);
+      ext.wrongStreak = Math.max(Number(ext.wrongStreak)||0, Number(item.wrongStreak)||0);
+      ext.shikkariStreak = Math.max(Number(ext.shikkariStreak)||0, Number(item.shikkariStreak)||0);
+    }
+  });
+  db = Array.from(mergedMap.values());
+  saveData();
+}
+
+function openPage(pageId) { executePageTransition(pageId, false); }
+function executePageTransition(pageId, isBackAction) {
+  clearInterval(quizTimer);
+  clearTimeout(autoNextTimeout);
+  const activeScreen = document.querySelector('.screen.active');
+  const currentId = activeScreen ? activeScreen.id : 'pgHome';
+  if (!isBackAction && currentId !== pageId) {
+    pageHistory.push(currentId);
+    history.pushState({ page: pageId }, '', '');
+  }
+  
+  // チャットを開いたまま他の画面に移動した場合はリストに戻しておく
+  if (pageId !== 'pgFriends') {
+      closeChat();
+  }
+
+  document.querySelectorAll('.screen').forEach(s => { s.classList.remove('active'); s.style.display = 'none'; });
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+  const tgt = document.getElementById(pageId);
+  if(tgt) { tgt.style.display = 'flex'; tgt.classList.add('active'); }
+
+  if (pageId === 'pgHome') document.getElementById('navHome').classList.add('active');
+  if (pageId === 'pgTree') { document.getElementById('navTree').classList.add('active'); renderTree(); }
+  if (pageId === 'pgBox') { document.getElementById('navBox').classList.add('active'); renderBox(); }
+  if (pageId === 'pgStats') { document.getElementById('navStats').classList.add('active'); renderStats(); }
+  if (pageId === 'pgBackup') document.getElementById('navBackup').classList.add('active');
+  
+  if (pageId === 'pgHome') buildQuizScopeDropdown();
+}
+
+function getTopLevelCategories() {
+  const children = new Set();
+  for (const parent in categoryTree) {
+    (categoryTree[parent] || []).forEach(c => children.add(c));
+  }
+  return categories.filter(c => !children.has(c));
+}
+function getAllSubcategories(catName, result = new Set()) {
+  if (result.has(catName)) return [...result];
+  result.add(catName);
+  if (categoryTree[catName]) categoryTree[catName].forEach(c => getAllSubcategories(c, result));
+  return [...result];
+}
+
+function renderTree() {
+  const root = document.getElementById('treeRoot');
+  root.innerHTML = '';
+  getTopLevelCategories().forEach(cat => root.appendChild(createTreeNode(cat, 0)));
+}
+
+function createTreeNode(catName, depth) {
+  const container = document.createElement('div');
+  if (depth > 0) { container.style.marginLeft = '16px'; container.style.marginTop = '6px'; }
+  
+  const card = document.createElement('div');
+  card.className = 'tree-group-card';
+  if (depth > 0) {
+    card.style.borderLeft = '3px solid var(--primary)';
+    card.style.borderRadius = '0 8px 8px 0';
+  }
+
+  const header = document.createElement('div');
+  header.className = 'tree-group-header';
+  if (depth > 0) { header.style.background = 'var(--bg4)'; header.style.padding = '10px 14px'; }
+  setupLongpress(header, () => handleCategoryLongpress(catName));
+
+  const directCount = db.filter(q => q.category === catName).length;
+  const children = categoryTree[catName] || [];
+  const hasChildren = children.length > 0;
+  const isExpanded = localStorage.getItem(`cat_exp_${catName}`) === 'true';
+  if (isExpanded) card.classList.add('expanded');
+
+  const titleArea = document.createElement('div');
+  titleArea.className = 'tree-group-title';
+  titleArea.innerHTML = `<span>${depth===0?'📁':'📂'}</span> <span style="word-break:break-all;">${escapeHtml(catName)}</span> <span class="tree-cat-count">${directCount}</span>`;
+  titleArea.onclick = (e) => {
+    e.stopPropagation();
+    currentViewContext = { type: 'category', value: catName };
+    openPage('pgBox');
+  };
+  header.appendChild(titleArea);
+
+  if (hasChildren) {
+    const arrow = document.createElement('div');
+    arrow.className = 'tree-group-arrow';
+    arrow.innerText = isExpanded ? '▼' : '▶';
+    arrow.onclick = (e) => {
+      e.stopPropagation();
+      const nextState = !card.classList.contains('expanded');
+      card.classList.toggle('expanded');
+      arrow.innerText = nextState ? '▼' : '▶';
+      localStorage.setItem(`cat_exp_${catName}`, nextState);
+    };
+    header.appendChild(arrow);
+  }
+
+  card.appendChild(header);
+
+  if (hasChildren) {
+    const childContainer = document.createElement('div');
+    childContainer.className = 'tree-group-children';
+    children.forEach(c => childContainer.appendChild(createTreeNode(c, depth + 1)));
+    card.appendChild(childContainer);
+  }
+
+  container.appendChild(card);
+  return container;
+}
+
+function addNewRootCategory() {
+  const txt = document.getElementById('txtNewRoot').value.trim();
+  if(!txt) return;
+  if(categories.includes(txt)) return alert("既に使用されているフォルダー名です。");
+  categories.push(txt);
+  document.getElementById('txtNewRoot').value = '';
+  saveData(); renderTree();
+}
+
+function setupLongpress(element, actionCallback) {
+  let pressTimer;
+  let isDragging = false;
+
+  const startHandler = (e) => {
+    if (e.type === 'contextmenu') { e.preventDefault(); return; }
+    if (e.touches && e.touches.length > 1) return;
+    isDragging = false;
+    pressTimer = setTimeout(() => {
+      if (!isDragging) {
+        if (navigator.vibrate) navigator.vibrate(50);
+        actionCallback();
+      }
+    }, 500);
+  };
+  const moveHandler = () => { isDragging = true; clearTimeout(pressTimer); };
+  const cancelHandler = () => clearTimeout(pressTimer);
+
+  element.addEventListener('mousedown', startHandler);
+  element.addEventListener('touchstart', startHandler, { passive: true });
+  element.addEventListener('mousemove', moveHandler);
+  element.addEventListener('touchmove', moveHandler, { passive: true });
+  element.addEventListener('mouseup', cancelHandler);
+  element.addEventListener('mouseleave', cancelHandler);
+  element.addEventListener('touchend', cancelHandler);
+  element.addEventListener('touchcancel', cancelHandler);
+  element.addEventListener('contextmenu', e => e.preventDefault());
+}
+
+function openContextMenu(title, items) {
+  document.getElementById('ctxHeader').innerText = title;
+  const body = document.getElementById('ctxBody');
+  body.innerHTML = '';
+  items.forEach(item => {
+    if (item.type === 'separator') {
+      const sep = document.createElement('div'); sep.className = 'menu-sep'; body.appendChild(sep);
+    } else {
+      const btn = document.createElement('button');
+      btn.className = `menu-item ${item.danger ? 'danger' : ''}`;
+      btn.innerHTML = item.html;
+      btn.onclick = () => { closeContextMenu(); item.action(); };
+      body.appendChild(btn);
+    }
+  });
+  document.getElementById('ctxOverlay').style.display = 'flex';
+}
+
+function closeContextMenu() { document.getElementById('ctxOverlay').style.display = 'none'; }
+
+function handleCategoryLongpress(catName) {
+  if (catName === "未分類") return alert("システム基本フォルダーは変更できません。");
+
+  const subCats = getAllSubcategories(catName);
+  const validParents = categories.filter(c => c !== catName && !subCats.includes(c));
+  let moveOptions = validParents.map(p => ({
+    html: `📁 「${p}」の中へ移動`,
+    action: () => {
+      for(let g in categoryTree) { if(categoryTree[g]) categoryTree[g] = categoryTree[g].filter(c => c !== catName); }
+      if(!categoryTree[p]) categoryTree[p] = [];
+      categoryTree[p].push(catName);
+      saveData(); renderTree();
+    }
+  }));
+
+  openContextMenu(`フォルダー: ${catName}`, [
+    {
+      html: '🔗 このフォルダーの共有URLを発行',
+      action: () => { shareCategory(catName); }
+    },
+    { type: 'separator' },
+    {
+      html: '➕ 中にサブフォルダーを作る',
+      action: () => {
+        const n = prompt(`「${catName}」の中に作成するフォルダー名:`);
+        if(!n || n.trim() === "") return;
+        if(categories.includes(n.trim())) return alert("既に同名のフォルダーが存在します。");
+        categories.push(n.trim());
+        if(!categoryTree[catName]) categoryTree[catName] = [];
+        categoryTree[catName].push(n.trim());
+        saveData(); renderTree();
+      }
+    },
+    {
+      html: '📝 この直下に問題を追加',
+      action: () => { currentViewContext = { type: 'category', value: catName }; showAddQModal(); }
+    },
+    { type: 'separator' },
+    {
+      html: '✏️ フォルダー名を変更',
+      action: () => {
+        const n = prompt("新しいフォルダー名を入力:", catName);
+        if(!n || n.trim() === "" || n === catName) return;
+        if(categories.includes(n.trim())) return alert("既に同名が存在します。");
+        categories = categories.map(c => c === catName ? n.trim() : c);
+        for(let p in categoryTree) {
+          categoryTree[p] = categoryTree[p].map(c => c === catName ? n.trim() : c);
         }
-        mockFriends.push(input.value);
-        alert(`${input.value} とフレンドになりました(シミュレート)`);
-        input.value = '';
-        init();
-    }
-
-    // 共有設定と権限データの読み込み
-    function loadShareSettings() {
-        const catId = document.getElementById('select-category').value;
-        const area = document.getElementById('share-settings-area');
-        if(!catId) {
-            area.style.display = 'none';
-            return;
+        if(categoryTree[catName]) { categoryTree[n.trim()] = categoryTree[catName]; delete categoryTree[catName]; }
+        db.forEach(q => { if(q.category === catName) q.category = n.trim(); });
+        saveData(); renderTree();
+      }
+    },
+    {
+      html: '➕ 問題を一括追加 (Q,A 改行)',
+      action: () => { showBulkAddModal(catName); }
+    },
+    {
+      html: '📤 このフォルダーと中身をエクスポート',
+      action: () => {
+        const allTargets = getAllSubcategories(catName);
+        const subset = db.filter(q => allTargets.includes(q.category));
+        let partialTree = {};
+        allTargets.forEach(t => { if(categoryTree[t]) partialTree[t] = categoryTree[t]; });
+        const payload = { db: subset, categories: allTargets, categoryTree: partialTree };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+        a.download = `susuru_anki_${catName}_${Date.now()}.json`; a.click();
+      }
+    },
+    { type: 'separator' },
+    ...moveOptions,
+    { type: 'separator' },
+    {
+      html: '❌ 削除 (中のフォルダー・問題も全て削除)',
+      danger: true,
+      action: () => {
+        if(!confirm(`警告: 「${catName}」と、その中にある全データ・フォルダーを抹消しますか？`)) return;
+        const toDelete = getAllSubcategories(catName);
+        db = db.filter(q => !toDelete.includes(q.category));
+        categories = categories.filter(c => !toDelete.includes(c));
+        for(let p in categoryTree) {
+          if(toDelete.includes(p)) delete categoryTree[p];
+          else if(categoryTree[p]) categoryTree[p] = categoryTree[p].filter(c => !toDelete.includes(c));
         }
-        area.style.display = 'block';
+        saveData(); renderTree();
+      }
+    }
+  ]);
+}
 
-        const cat = categories.find(c => c.id === catId);
-        
-        // URL表示 (完全な被りなしハッシュ)
-        const baseUrl = window.location.origin + window.location.pathname;
-        document.getElementById('share-url-display').innerText = `${baseUrl}?share=${cat.hash}`;
+function showAllCards() {
+  currentViewContext = 'all';
+  const sb = document.getElementById('txtSearchBox'); if(sb) sb.value = '';
+  renderBox();
+}
 
-        // フレンドごとの編集権限チェックボックス生成
-        const permissionList = document.getElementById('editor-permission-list');
-        permissionList.innerHTML = '';
-        
-        mockFriends.forEach(friend => {
-            const isChecked = cat.editors.includes(friend) ? 'checked' : '';
-            permissionList.innerHTML += `
-                <li>
-                    <label>
-                        <input type="checkbox" value="${friend}" ${isChecked}> ${friend} に編集を許可する
-                    </label>
-                </li>
-            `;
-        });
+function renderBox() {
+  const container = document.getElementById('boxList'); container.innerHTML = '';
+  let filtered = [...db];
+  let titleString = "📝 全ての問題一覧";
+
+  if (typeof currentViewContext === 'object' && currentViewContext.type === 'category') {
+    const targetCat = currentViewContext.value;
+    const subCats = getAllSubcategories(targetCat);
+    filtered = db.filter(q => subCats.includes(q.category));
+    titleString = `🔖 ${targetCat} 内のカード`;
+  } else if (typeof currentViewContext === 'string' && currentViewContext !== 'all') {
+    titleString = `📊 実績抽出カードの一覧`;
+    const th = parseInt(document.getElementById('numGradThreshold').value) || 5;
+    if (currentViewContext === 'grad') filtered = db.filter(q => q.correct >= th);
+    if (currentViewContext === 'master') filtered = db.filter(q => q.correct < th && q.level >= 3);
+    if (currentViewContext === 'normal') filtered = db.filter(q => q.correct < th && q.level >= 1 && q.level <= 2);
+    if (currentViewContext === 'weak') filtered = db.filter(q => q.correct < th && q.level === 0 && (q.correct+q.incorrect)>0);
+    if (currentViewContext === 'shikkari') filtered = db.filter(q => q.correct < th && q.level === -1);
+    if (currentViewContext === 'unseen') filtered = db.filter(q => q.correct === 0 && q.incorrect === 0 && q.level >= 0);
+  }
+
+  const sb = document.getElementById('txtSearchBox');
+  if (sb && sb.value.trim() !== '') {
+    const kw = sb.value.trim().toLowerCase();
+    filtered = filtered.filter(q => q.question.toLowerCase().includes(kw) || q.answer.toLowerCase().includes(kw));
+  }
+
+  document.getElementById('boxTitle').innerText = titleString;
+  document.getElementById('lblBoxCount').innerText = `${filtered.length} 件のカード`;
+  if(filtered.length === 0) {
+    container.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text3); font-size:0.9rem;">問題がありません</div>'; return;
+  }
+
+  filtered.forEach(item => {
+    const th = parseInt(document.getElementById('numGradThreshold').value) || 5;
+    const isGrad = item.correct >= th;
+    const card = document.createElement('div'); card.className = 'q-card';
+    setupLongpress(card, () => handleQuestionLongpress(item));
+
+    const lvlStr = item.level === -1 ? 'しっかり' : 'LV '+item.level;
+    const badgeHTML = `<span class="badge ${isGrad ? 'badge-grad':'badge-level'}">${isGrad ? 'GRADUATE' : lvlStr}</span>`;
+
+    // ★ 答えトグル用にIDをキャッシュ
+    _boxAnswerCache[item.id] = item.answer;
+
+    card.innerHTML = `
+      <div class="q-card-text">${escapeHtml(item.question)}</div>
+      <div style="font-size:0.85rem; color:var(--text2); margin-bottom:8px; cursor:pointer;" data-id="${escapeHtml(item.id)}" data-shown="0" onclick="toggleCardAnswer(this)">
+        A: <span style="background:var(--bg4); color:var(--text2); padding:2px 8px; border-radius:6px; border:1px solid var(--border); display:inline-block; font-size:0.75rem;">👆 タップして答えを表示</span>
+      </div>
+      <div class="q-card-sub">
+        ${badgeHTML}
+        <span>正解: ${item.correct} / 不正解: ${item.incorrect}</span>
+        <span style="font-size:0.75rem; color:var(--text3);">📂 ${escapeHtml(item.category)}</span>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function handleQuestionLongpress(item) {
+  let moveOptions = [];
+  categories.forEach(cat => {
+    if (cat !== item.category) {
+      moveOptions.push({
+        html: `📂 フォルダー「${cat}」へ移動`,
+        action: () => { item.category = cat; saveData(); renderBox(); }
+      });
+    }
+  });
+
+  openContextMenu("カード操作オプション", [
+    {
+      html: '✏️ このカードの問題文と答えを編集',
+      action: () => {
+        const newQ = prompt("問題文を編集:", item.question); if(newQ === null) return;
+        const newA = prompt("答えを編集:", item.answer); if(newA === null) return;
+        item.question = newQ.trim() || item.question; item.answer = newA.trim() || item.answer;
+        autoMerge(); renderBox();
+      }
+    },
+    { type: 'separator' },
+    ...moveOptions,
+    { type: 'separator' },
+    {
+      html: '🗑️ この問題カードを完全削除', danger: true,
+      action: () => {
+        if(!confirm("この問題を完全に消去しますか？")) return;
+        db = db.filter(q => q.id !== item.id); saveData(); renderBox();
+      }
+    }
+  ]);
+}
+
+function showAddQModal() {
+  let defaultCat = "未分類";
+  if (typeof currentViewContext === 'object' && currentViewContext.type === 'category') defaultCat = currentViewContext.value;
+  const q = prompt("新規追加：問題文を入力してください"); if(!q || q.trim() === "") return;
+  const a = prompt("新規追加：正解を入力してください"); if(!a || a.trim() === "") return;
+  db.push({
+    id: 'id_' + Math.random().toString(36).slice(2) + Date.now().toString(36),
+    question: q.trim(), answer: a.trim(), category: defaultCat,
+    level: 0, correct: 0, incorrect: 0, streak: 0, wrongStreak: 0, shikkariStreak: 0
+  });
+  autoMerge(); renderBox();
+}
+
+function filterBoxByStatus(statusType) { currentViewContext = statusType; openPage('pgBox'); }
+
+// ★ ドリルダウン式カテゴリー選択の構築
+function buildQuizScopeDropdown() {
+  const container = document.getElementById('scopeSelectors');
+  if(!container) return;
+  container.innerHTML = '';
+  createScopeSelect(0, getTopLevelCategories());
+}
+
+function createScopeSelect(depth, categoriesToShow) {
+  if (categoriesToShow.length === 0) return;
+
+  const select = document.createElement('select');
+  select.className = 'form-control';
+  
+  if (depth === 0) {
+    const optAll = document.createElement('option');
+    optAll.value = "all";
+    optAll.innerText = "🌐 全ての問題から出題";
+    select.appendChild(optAll);
+  }
+  
+  const optDefault = document.createElement('option');
+  optDefault.value = "";
+  optDefault.innerText = depth === 0 ? "📁 トップカテゴリーを選択..." : "📂 サブカテゴリーを選択... (任意)";
+  optDefault.disabled = true;
+  optDefault.selected = true;
+  select.appendChild(optDefault);
+
+  categoriesToShow.forEach(cat => {
+    const opt = document.createElement('option');
+    opt.value = cat;
+    opt.innerText = depth === 0 ? `📁 ${cat}` : `📂 ${cat}`;
+    select.appendChild(opt);
+  });
+
+  select.onchange = (e) => {
+    const val = e.target.value;
+    const container = document.getElementById('scopeSelectors');
+    
+    // 自身の階層より下のセレクトボックスをすべて削除
+    const selects = Array.from(container.querySelectorAll('select'));
+    selects.forEach((sel, idx) => {
+      if (idx > depth) sel.remove();
+    });
+
+    if (val === "all") {
+      selectedScopePath = ["all"];
+      return;
     }
 
-    // 権限の保存
-    function savePermissions() {
-        const catId = document.getElementById('select-category').value;
-        const cat = categories.find(c => c.id === catId);
-        
-        const checkboxes = document.querySelectorAll('#editor-permission-list input[type="checkbox"]');
-        cat.editors = [];
-        checkboxes.forEach(cb => {
-            if(cb.checked) cat.editors.push(cb.value);
+    selectedScopePath[depth] = val;
+    selectedScopePath = selectedScopePath.slice(0, depth + 1); // 自身の深さまでパスを切り詰める
+
+    const children = categoryTree[val] || [];
+    if (children.length > 0) {
+      createScopeSelect(depth + 1, children);
+    }
+  };
+
+  document.getElementById('scopeSelectors').appendChild(select);
+}
+
+function startQuiz() {
+  let scope = "all";
+  if (selectedScopePath.length > 0 && selectedScopePath[0] !== "all") {
+    scope = "cat:" + selectedScopePath[selectedScopePath.length - 1];
+  }
+  
+  const includeGrad = document.getElementById('chkIncludeGrad').checked;
+  const limitCount = parseInt(document.getElementById('numQCount').value) || 10;
+  currentQuestionGradThreshold = parseInt(document.getElementById('numGradThreshold').value) || 5;
+
+  let subset = [...db];
+  if(!includeGrad) subset = subset.filter(q => q.correct < currentQuestionGradThreshold);
+
+  if(scope.startsWith('cat:')) {
+    const cName = scope.replace('cat:', '');
+    const targets = getAllSubcategories(cName);
+    subset = subset.filter(q => targets.includes(q.category));
+  }
+
+  if(subset.length === 0) return alert("⚠️ 条件に合致する問題が見つかりませんでした。");
+  for (let i = subset.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [subset[i], subset[j]] = [subset[j], subset[i]];
+  }
+  quizPool = subset.slice(0, limitCount); quizIndex = 0;
+
+  // ★ 逆引きモード: 問題と答えを入れ替え
+  const swapQA = document.getElementById('chkSwapQA').checked;
+  if (swapQA) {
+    quizPool = quizPool.map(q => ({ ...q, question: q.answer, answer: q.question }));
+  }
+
+  openPage('pgQuizPlayer'); loadQuizQuestion();
+}
+
+function loadQuizQuestion() {
+  quizPhase = 'q'; selectedChoiceIdx = null; window.currentSelfJudge = null;
+  const cur = quizPool[quizIndex];
+  document.getElementById('lblQuizProgress').innerText = `Q ${quizIndex + 1}/${quizPool.length}`;
+  document.getElementById('lblQuizQuestion').innerText = cur.question;
+  const fb = document.getElementById('quizFeedback'); fb.className = 'feedback-area'; fb.style.display = 'none';
+
+  const mode = document.getElementById('selQuizMode').value;
+  
+  document.getElementById('boxChoiceArea').style.display = 'none';
+  document.getElementById('boxDescArea').style.display = 'none';
+  document.getElementById('boxTapArea').style.display = 'none';
+  document.getElementById('boxSelfArea').style.display = 'none';
+  document.getElementById('boxMinhayaArea').style.display = 'none';
+  
+  document.getElementById('btnQuizAction').style.display = 'inline-flex';
+  document.getElementById('btnQuizPass').style.display = 'inline-flex';
+  document.getElementById('btnQuizAction').innerText = '確定する';
+
+  if(mode === 'choice') {
+    document.getElementById('boxChoiceArea').style.display = 'grid';
+    buildFourChoices(cur);
+  } else if (mode === 'minhaya') {
+    document.getElementById('boxMinhayaArea').style.display = 'block';
+    buildMinhayaMode(cur);
+    document.getElementById('btnQuizAction').style.display = 'none'; // 正解/不正解で自動判定
+  } else if (mode === 'tap') {
+    document.getElementById('boxTapArea').style.display = 'block';
+    buildTapChoices(cur);
+    document.getElementById('btnQuizAction').style.display = 'none'; // タップ完了で自動判定
+  } else if (mode === 'self') {
+    document.getElementById('boxSelfArea').style.display = 'block';
+    buildSelfMode(cur);
+    document.getElementById('btnQuizAction').style.display = 'none'; // 自己申告ボタンを使う
+    document.getElementById('btnQuizPass').style.display = 'none'; // パスも非表示（答えを見るで代用）
+  } else {
+    document.getElementById('boxDescArea').style.display = 'block';
+    const inp = document.getElementById('txtDescAnswer'); inp.value = ''; inp.disabled = false; inp.focus();
+  }
+
+  const speed = document.getElementById('selQuizSpeed').value;
+  let base = 15;
+  if (speed === 'easy') base = 25; else if (speed === 'hard') base = 10; else if (speed === 'expert') base = 5;
+  if(cur.answer.length > 5) base += Math.min(15, (cur.answer.length - 5) * 1.5);
+  if(/[\u3040-\u30ff\u4e00-\u9faf]/.test(cur.answer)) base += 5;
+  quizTimeLimit = base; quizTimeLeft = base;
+
+  clearInterval(quizTimer); updateTimerUI();
+  let hintShown = false; document.getElementById('lblQuizHint').style.display = 'none';
+
+  quizTimer = setInterval(() => {
+    quizTimeLeft -= 0.1;
+    if(quizTimeLeft <= 0) { quizTimeLeft = 0; clearInterval(quizTimer); evaluateRoundAnswer(false, "⏰ 時間切れ！"); }
+    updateTimerUI();
+    if (speed !== 'expert' && !hintShown && quizTimeLeft < (quizTimeLimit * (speed === 'easy' ? 0.7 : 0.4))) {
+      hintShown = true;
+      const hb = document.getElementById('lblQuizHint');
+      hb.innerText = `ヒント: 先頭は「 ${cur.answer.charAt(0)} 」 ${cur.answer.length>3?`(全 ${cur.answer.length} 文字)`:''}`;
+      hb.style.display = 'inline-block';
+    }
+  }, 100);
+}
+
+function updateTimerUI() {
+  const pct = (quizTimeLeft / quizTimeLimit) * 100;
+  const bar = document.getElementById('barTimerFill'); bar.style.width = `${pct}%`;
+  if(pct < 30) bar.classList.add('warning'); else bar.classList.remove('warning');
+  document.getElementById('lblQuizTimerText').innerText = `${quizTimeLeft.toFixed(1)}s`;
+}
+
+// ----------------------
+// 各種モード描画ロジック
+// ----------------------
+
+// ----------------------
+// ★ みんはや形式モード
+// ----------------------
+let minhayaTarget = "";
+let minhayaPos = 0;
+
+function buildMinhayaMode(cur) {
+  // 複数答えがある場合は先頭を使用（tapモードと同様）
+  minhayaTarget = cur.answer.split(',')[0].trim();
+  minhayaPos = 0;
+  renderMinhayaDisplay(cur);
+}
+
+function renderMinhayaDisplay(cur) {
+  const area = document.getElementById('boxMinhayaArea');
+  area.innerHTML = '';
+
+  // 進捗テキスト
+  const prog = document.createElement('div');
+  prog.style.cssText = 'text-align:center; font-size:0.78rem; color:var(--text2); margin-bottom:10px; font-family:"JetBrains Mono",monospace; letter-spacing:1px;';
+  prog.innerText = `${minhayaPos} / ${minhayaTarget.length} 文字入力済み`;
+  area.appendChild(prog);
+
+  // 文字スロット表示
+  const slotsDiv = document.createElement('div');
+  slotsDiv.style.cssText = 'display:flex; flex-wrap:wrap; justify-content:center; gap:6px; margin-bottom:18px;';
+  for (let i = 0; i < minhayaTarget.length; i++) {
+    const slot = document.createElement('div');
+    const filled  = i < minhayaPos;
+    const current = i === minhayaPos;
+    slot.style.cssText = [
+      'min-width:42px; height:46px; border-radius:8px;',
+      'display:flex; align-items:center; justify-content:center;',
+      'font-size:1.3rem; font-weight:bold; padding:0 6px;',
+      `border:2px solid ${filled ? 'var(--success)' : current ? 'var(--primary)' : 'var(--border)'};`,
+      `background:${filled ? 'rgba(34,199,122,0.12)' : current ? 'rgba(79,124,255,0.1)' : 'var(--bg3)'};`,
+      `color:${filled ? 'var(--success)' : current ? 'var(--primary)' : 'var(--text3)'};`
+    ].join('');
+    slot.innerText = filled ? minhayaTarget[i] : (current ? '?' : '＿');
+    slotsDiv.appendChild(slot);
+  }
+  area.appendChild(slotsDiv);
+
+  if (minhayaPos >= minhayaTarget.length) return;
+
+  const correctChar = minhayaTarget[minhayaPos];
+  const correctNorm = normalizeAnswer(cur.answer);
+
+  // ★みんはや対策: 同じ問題文を持つ別カードの答えの文字を除外
+  const sameQAnswerNorms = new Set(
+    db.filter(q => q.id !== cur.id && normalizeAnswer(q.question) === normalizeAnswer(cur.question))
+      .map(q => normalizeAnswer(q.answer))
+  );
+
+  const getParentCat = (c) => {
+    for (const p in categoryTree) if ((categoryTree[p] || []).includes(c)) return p;
+    return null;
+  };
+
+  // 同カテゴリー優先でダミー文字を収集
+  let distChars = [];
+  let searchCat = cur.category;
+  while (distChars.length < 9 && searchCat) {
+    db.filter(q => q.category === searchCat
+        && normalizeAnswer(q.answer) !== correctNorm
+        && !sameQAnswerNorms.has(normalizeAnswer(q.answer)))
+      .forEach(q => q.answer.split('').forEach(c => {
+        if (!/[\s,、，。・]/.test(c) && c !== correctChar) distChars.push(c);
+      }));
+    searchCat = getParentCat(searchCat);
+  }
+  // 足りなければ全体から補充
+  if (distChars.length < 3) {
+    db.filter(q => normalizeAnswer(q.answer) !== correctNorm
+        && !sameQAnswerNorms.has(normalizeAnswer(q.answer)))
+      .forEach(q => q.answer.split('').forEach(c => {
+        if (!/[\s,、，。・]/.test(c) && c !== correctChar) distChars.push(c);
+      }));
+  }
+  distChars = [...new Set(distChars)];
+  distChars.sort(() => Math.random() - 0.5);
+
+  let choices = [correctChar, ...distChars.slice(0, 3)];
+  // 足りない場合のフォールバック
+  const fallbacks = 'あいうえおかきくけこさしすせそたちつてとなにぬねの'.split('').filter(c => c !== correctChar);
+  while (choices.length < 4) choices.push(fallbacks[Math.floor(Math.random() * fallbacks.length)]);
+  choices.sort(() => Math.random() - 0.5);
+
+  // 2×2グリッド選択肢
+  const choicesDiv = document.createElement('div');
+  choicesDiv.style.cssText = 'display:grid; grid-template-columns:1fr 1fr; gap:10px;';
+  choices.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.style.cssText = 'justify-content:center; font-size:1.6rem; font-weight:bold; height:60px;';
+    btn.innerText = c;
+    btn.onclick = () => {
+      if (quizPhase !== 'q') return;
+      if (c === correctChar) {
+        minhayaPos++;
+        if (minhayaPos >= minhayaTarget.length) {
+          clearInterval(quizTimer);
+          evaluateRoundAnswer(true, "🎉 正解！");
+        } else {
+          renderMinhayaDisplay(cur);
+        }
+      } else {
+        // 1文字でも間違えたら即不正解
+        clearInterval(quizTimer);
+        // 間違いを一瞬見せてから評価
+        btn.style.background = 'rgba(255,79,106,0.3)';
+        btn.style.borderColor = 'var(--danger)';
+        setTimeout(() => evaluateRoundAnswer(false, "❌ 不正解"), 300);
+      }
+    };
+    choicesDiv.appendChild(btn);
+  });
+  area.appendChild(choicesDiv);
+}
+
+function buildFourChoices(cur) {
+  const area = document.getElementById('boxChoiceArea'); area.innerHTML = '';
+  const correctNorm = normalizeAnswer(cur.answer);
+
+  // ★みんはや対策: 同じ問題文を持つ別カードの答えを除外（こすった/擦った問題）
+  const sameQAnswerNorms = new Set(
+    db.filter(q => q.id !== cur.id && normalizeAnswer(q.question) === normalizeAnswer(cur.question))
+      .map(q => normalizeAnswer(q.answer))
+  );
+
+  // ダミー選択肢として有効かチェック
+  const isValidDistractor = (answer) => {
+    const norm = normalizeAnswer(answer);
+    if (norm === correctNorm) return false;       // 正解と同一（表記違い含む）
+    if (sameQAnswerNorms.has(norm)) return false; // 同じ問いの別答え
+    return true;
+  };
+
+  // ★同カテゴリー優先: 直接カテゴリー → 親へ遡る → 全体
+  const getParentCategory = (catName) => {
+    for (const p in categoryTree) {
+      if ((categoryTree[p] || []).includes(catName)) return p;
+    }
+    return null;
+  };
+
+  let altCandidates = [];
+  let searchCat = cur.category;
+  while (altCandidates.length < 3 && searchCat) {
+    const catAnswers = [...new Set(
+      db.filter(q => q.category === searchCat && isValidDistractor(q.answer)).map(q => q.answer)
+    )];
+    catAnswers.forEach(a => { if (!altCandidates.includes(a)) altCandidates.push(a); });
+    searchCat = getParentCategory(searchCat);
+  }
+
+  // 同カテゴリー系統で足りなければ全体から補充
+  if (altCandidates.length < 3) {
+    const globalAnswers = [...new Set(
+      db.filter(q => isValidDistractor(q.answer)).map(q => q.answer)
+    )];
+    globalAnswers.forEach(a => { if (!altCandidates.includes(a)) altCandidates.push(a); });
+  }
+
+  altCandidates.sort(() => Math.random() - 0.5);
+  let finalFour = [cur.answer, ...altCandidates.slice(0, 3)];
+  while (finalFour.length < 4) finalFour.push(`選択肢_${Math.floor(Math.random()*1000)}`);
+  finalFour.sort(() => Math.random() - 0.5);
+
+  finalFour.forEach((text, i) => {
+    const btn = document.createElement('button'); btn.className = 'choice-btn';
+    btn.innerHTML = `<div class="choice-idx">${i+1}</div><div style="flex:1;">${escapeHtml(text)}</div>`;
+    btn.onclick = () => {
+      if(quizPhase !== 'q') return;
+      document.querySelectorAll('.choice-btn').forEach(b => b.style.borderColor = 'var(--border)');
+      btn.style.borderColor = 'var(--primary)'; selectedChoiceIdx = text;
+    };
+    area.appendChild(btn);
+  });
+}
+
+// ★文字タップモード実装
+let currentTapTarget = "";
+let currentTapInput = [];
+
+function getDummyChars(count) {
+  let allChars = db.map(q => q.answer).join('').replace(/[、，／/ \u3000,\da-zA-Z]/g, '').split('');
+  if (allChars.length === 0) allChars = 'あいうえおかきくけこさしすせそ'.split('');
+  let res = [];
+  for(let i=0; i<count; i++) { res.push(allChars[Math.floor(Math.random() * allChars.length)]); }
+  return res;
+}
+
+function buildTapChoices(cur) {
+  const ansStr = cur.answer.split(',')[0].trim();
+  currentTapTarget = ansStr;
+  currentTapInput = [];
+  
+  const inArea = document.getElementById('tapInputArea');
+  const chArea = document.getElementById('tapChoiceArea');
+  inArea.innerHTML = ''; chArea.innerHTML = '';
+  
+  let chars = ansStr.split('');
+  chars = chars.concat(getDummyChars(2)); // ダミーを2文字追加
+  chars.sort(() => Math.random() - 0.5);
+  
+  chars.forEach((c, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-secondary';
+    btn.style.width = '48px'; btn.style.height = '48px'; btn.style.padding = '0'; btn.style.fontSize = '1.3rem';
+    btn.innerText = c; btn.id = 'tap_btn_' + idx;
+    btn.onclick = () => {
+      if (quizPhase !== 'q') return;
+      currentTapInput.push({ char: c, id: btn.id });
+      btn.style.display = 'none';
+      renderTapInput();
+      if (currentTapInput.length === currentTapTarget.length) {
+        clearInterval(quizTimer);
+        const inputStr = currentTapInput.map(x => x.char).join('');
+        const isCorrect = (inputStr === currentTapTarget);
+        evaluateRoundAnswer(isCorrect, isCorrect ? "🎉 正解！" : "❌ 順番が違います");
+      }
+    };
+    chArea.appendChild(btn);
+  });
+}
+
+function renderTapInput() {
+  const inArea = document.getElementById('tapInputArea');
+  inArea.innerHTML = '';
+  if (currentTapInput.length === 0) { inArea.innerHTML = '<span style="color:var(--text3); font-size:0.85rem;">順番にタップしてください</span>'; return; }
+
+  currentTapInput.forEach((item, index) => {
+    const box = document.createElement('div');
+    box.style.background = 'var(--primary)'; box.style.color = '#fff';
+    box.style.width = '36px'; box.style.height = '36px'; box.style.borderRadius = '6px';
+    box.style.display = 'flex'; box.style.alignItems = 'center'; box.style.justifyContent = 'center';
+    box.style.fontSize = '1.2rem'; box.style.fontWeight = 'bold'; box.style.cursor = 'pointer';
+    box.innerText = item.char;
+    box.onclick = (e) => {
+      e.stopPropagation();
+      if (quizPhase !== 'q') return;
+      const removed = currentTapInput.splice(index, 1)[0];
+      document.getElementById(removed.id).style.display = 'inline-flex';
+      renderTapInput();
+    };
+    inArea.appendChild(box);
+  });
+}
+
+// ★自己申告モード実装
+function buildSelfMode(cur) {
+  document.getElementById('btnShowAnswer').style.display = 'inline-flex';
+  document.getElementById('selfJudgeArea').style.display = 'none';
+}
+
+function showSelfAnswer() {
+  clearInterval(quizTimer); // タイマーストップ
+  document.getElementById('btnShowAnswer').style.display = 'none';
+  const cur = quizPool[quizIndex];
+  document.getElementById('selfAnswerDisplay').innerText = `A: ${cur.answer}`;
+  document.getElementById('selfJudgeArea').style.display = 'block';
+}
+
+function submitSelfMode(judge) {
+  let isCorrect = false; let head = "";
+  if (judge === 'perfect') { isCorrect = true; head = "🎉 完璧！"; }
+  else if (judge === 'good') { isCorrect = true; head = "👍 普通（思い出した）"; }
+  else { isCorrect = false; head = "❌ ミス"; }
+  window.currentSelfJudge = judge;
+  evaluateRoundAnswer(isCorrect, head);
+}
+
+// ----------------------
+// 判定・進行ロジック
+// ----------------------
+
+function passQuizQuestion() { clearInterval(quizTimer); evaluateRoundAnswer(false, "🏳️ パスしました"); }
+
+function submitQuizAction() {
+  if (quizPhase === 'a') {
+    clearTimeout(autoNextTimeout); 
+    quizIndex++;
+    if(quizIndex < quizPool.length) loadQuizQuestion();
+    else { alert("🏁 クイズ終了！実績を確認しましょう。"); openPage('pgHome'); }
+    return;
+  }
+  
+  clearInterval(quizTimer);
+  const cur = quizPool[quizIndex]; let isCorrect = false;
+  const mode = document.getElementById('selQuizMode').value;
+  
+  if (mode === 'choice') {
+    if(!selectedChoiceIdx) { alert("選択肢をタップしてください。"); quizTimer=setInterval(()=>{},1000); return; }
+    isCorrect = (selectedChoiceIdx === cur.answer);
+  } else {
+    isCorrect = (normalizeAnswer(document.getElementById('txtDescAnswer').value) === normalizeAnswer(cur.answer));
+    document.getElementById('txtDescAnswer').disabled = true;
+  }
+  evaluateRoundAnswer(isCorrect, isCorrect ? "🎉 正解！" : "❌ 不正解");
+}
+
+function evaluateRoundAnswer(isCorrect, head) {
+  quizPhase = 'a'; const cur = quizPool[quizIndex];
+  let m = db.find(q => q.id === cur.id);
+  
+  if(m) {
+    if(m.wrongStreak === undefined) m.wrongStreak = 0;
+    if(m.shikkariStreak === undefined) m.shikkariStreak = 0;
+
+    const mode = document.getElementById('selQuizMode').value;
+    const isChoice = mode === 'choice';
+    const isTap = mode === 'tap';
+    const isSelf = mode === 'self';
+    const isMinhaya = mode === 'minhaya';
+    const multiplier = (isChoice || isTap || isMinhaya) ? 2 : 1; // 4択/タップ/みんはやは勘で当たる確率があるので2倍
+    const th = currentQuestionGradThreshold;
+
+    if(isCorrect) {
+      m.correct++;
+      // 自己申告の「普通」の場合は連続正解ボーナス(streak)は増やさずキープする
+      if (isSelf && window.currentSelfJudge === 'good') {
+        m.wrongStreak = 0;
+      } else {
+        m.streak++; m.wrongStreak = 0;
+      }
+      
+      if (m.level === -1) {
+        m.shikkariStreak++;
+        if (m.shikkariStreak >= 5 * multiplier) {
+          m.level = 0; // 苦手に昇格
+          m.shikkariStreak = 0;
+          m.streak = 0;
+        }
+      } else if (m.correct - 1 >= th) {
+        // すでに卒業済みの場合はレベル変動なし
+      } else {
+        if (m.streak >= 2 * multiplier && m.level < 5) {
+          m.level++;
+          m.streak = 0;
+        }
+      }
+    } else {
+      m.incorrect++; m.wrongStreak++; m.streak = 0; m.shikkariStreak = 0;
+
+      if (m.correct >= th) {
+        // 卒業からの降格
+        if (m.wrongStreak >= 3 * multiplier) {
+          m.correct = th - 1; // 卒業取り消し
+          m.level = 2; // 普通へ降格
+          m.wrongStreak = 0;
+        }
+      } else {
+        if (m.level === -1) {
+          // しっかりキープ
+        } else {
+          // 4回誤答でしっかりへ直行
+          if (m.wrongStreak >= 4 * multiplier) {
+            m.level = -1; // しっかり
+            m.wrongStreak = 0;
+            m.correct = 0; // 蓄積リセット
+          } else if (m.wrongStreak > 0 && m.wrongStreak % (2 * multiplier) === 0) {
+            if (m.level > 0) m.level--;
+          }
+        }
+      }
+    }
+    saveData();
+  }
+  
+  const fb = document.getElementById('quizFeedback');
+  document.getElementById('feedbackResultText').innerText = head;
+  document.getElementById('feedbackAnswerText').innerText = `正解: ${cur.answer}`;
+  fb.className = `feedback-area ${isCorrect ? 'correct':'incorrect'}`; fb.style.display = 'flex';
+  
+  document.getElementById('btnQuizPass').style.display = 'none';
+  document.getElementById('btnQuizAction').style.display = 'inline-flex';
+  document.getElementById('btnQuizAction').innerText = '次の問題へ';
+
+  // ★ 4択、タップ、自己申告モードの場合は3秒後に自動遷移
+  const mode = document.getElementById('selQuizMode').value;
+  if (mode === 'choice' || mode === 'tap' || mode === 'self' || mode === 'minhaya') {
+    clearTimeout(autoNextTimeout);
+    autoNextTimeout = setTimeout(() => {
+      if (quizPhase === 'a') submitQuizAction();
+    }, 3000);
+  }
+}
+
+function renderStats() {
+  const th = parseInt(document.getElementById('numGradThreshold').value) || 5;
+  const t = db.length;
+  document.getElementById('statTotal').innerText = t;
+  document.getElementById('cntGrad').innerText = db.filter(q => q.correct >= th).length;
+  document.getElementById('cntMaster').innerText = db.filter(q => q.correct < th && q.level >= 3).length;
+  document.getElementById('cntNormal').innerText = db.filter(q => q.correct < th && q.level >= 1 && q.level <= 2).length;
+  document.getElementById('cntWeak').innerText = db.filter(q => q.correct < th && q.level === 0 && (q.correct+q.incorrect)>0).length;
+  document.getElementById('cntShikkari').innerText = db.filter(q => q.correct < th && q.level === -1).length;
+  document.getElementById('cntUnseen').innerText = db.filter(q => q.correct === 0 && q.incorrect === 0 && q.level >= 0).length;
+  document.getElementById('statGradRatio').innerText = t > 0 ? `${Math.round((document.getElementById('cntGrad').innerText/t)*100)}%` : '0%';
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify({ db, categories, categoryTree }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `susuru_anki_${Date.now()}.json`; a.click();
+}
+function importJSON(e) {
+  if(!e.target.files[0]) return;
+  const r = new FileReader();
+  r.onload = function(evt) {
+    try {
+      const p = JSON.parse(evt.target.result);
+      if(p.db) db = p.db; if(p.categories) categories = p.categories; if(p.categoryTree) categoryTree = p.categoryTree;
+      autoMerge(); alert("📦 インポート成功！"); openPage('pgHome');
+    } catch(err) { alert("無効なJSONです。"); }
+  };
+  r.readAsText(e.target.files[0]);
+}
+
+function exportCSV() {
+  let lines = [["問題", "答え", "フォルダー", "レベル", "正解数", "不正解数"]];
+  db.forEach(q => lines.push([q.question, q.answer, q.category, q.level, q.correct, q.incorrect]));
+  const csv = lines.map(l => l.map(t => `"${String(t).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const b = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `susuru_anki_${Date.now()}.csv`; a.click();
+}
+function importCSV(e) {
+  if(!e.target.files[0]) return;
+  const r = new FileReader();
+  r.onload = function(evt) {
+    try {
+      const lines = evt.target.result.split(/\r?\n/).filter(l => l.trim() !== "");
+      if(lines.length < 2) return alert("データがありません。");
+      const parse = (text) => {
+        let f=[], cur="", inQ=false;
+        for(let i=0; i<text.length; i++) {
+          let c = text.charAt(i);
+          if(c === '"') { if(inQ && text.charAt(i+1)==='"') { cur+='"'; i++; } else inQ = !inQ; }
+          else if(c === ',' && !inQ) { f.push(cur); cur = ""; } else cur += c;
+        }
+        f.push(cur); return f;
+      };
+      const h = parse(lines[0]).map(x=>x.trim());
+      let iQ = h.indexOf("問題"), iA = h.indexOf("答え"), iC = h.indexOf("フォルダー");
+      if(iQ===-1) iQ=0; if(iA===-1) iA=1; if(iC===-1) iC=2;
+      let count = 0;
+      for(let i=1; i<lines.length; i++) {
+        const c = parse(lines[i]);
+        if(c.length <= Math.max(iQ, iA)) continue;
+        const q = c[iQ]?.trim(), a = c[iA]?.trim(); if(!q || !a) continue;
+        let cat = (iC !== -1 && c[iC]) ? c[iC].trim() : "未分類"; if(!cat) cat="未分類";
+        if(!categories.includes(cat)) categories.push(cat);
+        db.push({
+          id: 'id_'+Math.random().toString(36).slice(2)+Date.now().toString(36),
+          question: q, answer: a, category: cat, level: 0, correct: 0, incorrect: 0, streak: 0, wrongStreak: 0, shikkariStreak: 0
+        }); count++;
+      }
+      autoMerge(); alert(`📊 ${count}件インポートしました。`); openPage('pgHome');
+    } catch(err) { alert("CSV解析に失敗しました。"); }
+  };
+  r.readAsText(e.target.files[0]);
+}
+
+async function syncToCloud(isSilent = false) {
+  if (!currentUser) { if (!isSilent) alert("Googleアカウントでログインしてください。"); return; }
+  try {
+    const ref = firestore.collection("susuru_anki_users").doc(currentUser.uid);
+    const snap = await ref.get();
+    if (snap.exists) {
+      let r = snap.data();
+      if (Array.isArray(r.db)) {
+        let lMap = new Map(db.map(q => [q.id, q]));
+        r.db.forEach(rq => {
+          if (!rq.question || !rq.answer) return;
+          if (lMap.has(rq.id)) {
+            let lq = lMap.get(rq.id);
+            if (rq.level > lq.level || rq.correct > lq.correct || rq.streak > lq.streak) lMap.set(rq.id, rq);
+          } else lMap.set(rq.id, rq);
         });
-        
-        alert('編集権限を更新しました。');
-        loadShareSettings();
+        db = Array.from(lMap.values());
+      }
+      let rCat = r.categories || [];
+      rCat.forEach(rc => { if (rc && !categories.includes(rc)) categories.push(rc); });
+      let rTree = r.categoryTree || {};
+      for (let p in rTree) {
+        if (!categories.includes(p)) categories.push(p);
+        if (!categoryTree[p]) categoryTree[p] = [];
+        rTree[p].forEach(c => { if (!categoryTree[p].includes(c)) categoryTree[p].push(c); });
+      }
+    }
+    ensureSystemSanity();
+    await ref.set({ version: "0.01.15-g", db, categories, categoryTree, lastSync: firebase.firestore.FieldValue.serverTimestamp() });
+    autoMerge();
+    if (document.getElementById('pgTree').classList.contains('active')) renderTree();
+    if (document.getElementById('pgBox').classList.contains('active')) renderBox();
+    if (!isSilent) { alert(`☁️ 同期完了！`); openPage('pgHome'); }
+  } catch (err) { if (!isSilent) alert(`⚠️ エラー: ${err.message}`); }
+}
+
+function factoryReset() {
+  if(!confirm("⚠️ 全消去します。よろしいですか？")) return;
+  localStorage.removeItem(STORAGE_KEY);
+  db = []; categories = ["未分類"]; categoryTree = {}; saveData();
+  alert("💥 初期化完了。"); openPage('pgHome');
+}
+
+// ★ 問題箱の答えトグル用キャッシュ
+let _boxAnswerCache = {};
+
+function toggleCardAnswer(el) {
+  const itemId = el.getAttribute('data-id');
+  const ans = _boxAnswerCache[itemId] || '';
+  const shown = el.getAttribute('data-shown') === '1';
+  el.setAttribute('data-shown', shown ? '0' : '1');
+  if (shown) {
+    el.innerHTML = 'A: <span style="background:var(--bg4); color:var(--text2); padding:2px 8px; border-radius:6px; border:1px solid var(--border); display:inline-block; font-size:0.75rem;">👆 タップして答えを表示</span>';
+  } else {
+    el.innerHTML = 'A: <span style="color:#fff; font-weight:500;">' + escapeHtml(ans) + '</span><span style="color:var(--text3); font-size:0.7rem; margin-left:8px;">👆 隠す</span>';
+  }
+}
+
+// ==========================================
+// 🌟 URL共有 & 共同編集システム
+// ==========================================
+
+let currentSharedDocId = null;
+let currentSharedData = null;
+let unsubscribeShared = null;
+
+function copyMyUid() {
+  const uid = document.getElementById('txtMyUid').value;
+  if (!uid) return alert("⚠️ UIDを確認するにはGoogleログインが必要です。");
+  navigator.clipboard.writeText(uid).then(() => {
+    alert("✅ 自分のUIDをコピーしました！\nフレンド登録したい相手にこのUIDを送ってください。");
+  });
+}
+
+// 共有URL発行処理
+async function shareCategory(catName) {
+  if (!currentUser) return alert("共有URLを発行するには、管理画面からGoogleアカウントでログインしてください。");
+  
+  const allTargets = getAllSubcategories(catName);
+  const subset = db.filter(q => allTargets.includes(q.category));
+  let partialTree = {};
+  allTargets.forEach(t => { if(categoryTree[t]) partialTree[t] = categoryTree[t]; });
+
+  try {
+    const docRef = await firestore.collection("susuru_anki_shared").add({
+      catName: catName,
+      cards: subset,
+      categories: allTargets,
+      categoryTree: partialTree,
+      ownerId: currentUser.uid,
+      ownerName: currentUser.displayName || currentUser.email || '不明',
+      friends: [], // 初期状態はフレンドなし
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    
+    // 一意のURLを構築
+    const shareUrl = window.location.origin + window.location.pathname + "?share_id=" + docRef.id;
+    await navigator.clipboard.writeText(shareUrl);
+    
+    alert(`✅ 「${catName}」の共有URLを発行しました！\n\nクリップボードにコピーされたので、そのまま友達に送信してください。\nURL: ${shareUrl}`);
+  } catch(err) {
+    alert("⚠️ 共有URLの発行に失敗しました。Firestoreの権限等をご確認ください。\nエラー: " + err.message);
+  }
+}
+
+// 共有URLからアクセスした際の読み込み
+function listenToSharedDoc(docId) {
+  if (unsubscribeShared) unsubscribeShared();
+  currentSharedDocId = docId;
+  document.getElementById('sharedTitle').innerText = "⏳ 読み込み中...";
+  
+  unsubscribeShared = firestore.collection("susuru_anki_shared").doc(docId).onSnapshot((snap) => {
+    if (!snap.exists) {
+      alert("⚠️ 共有されたデータが見つかりません。削除された可能性があります。");
+      exitSharedMode();
+      return;
+    }
+    currentSharedData = snap.data();
+    renderSharedPage();
+  }, err => {
+    console.error(err);
+    alert("⚠️ 共有データの取得に失敗しました。");
+  });
+}
+
+// 共有ページの描画と権限制御
+function renderSharedPage() {
+  if (!currentSharedData) return;
+  const data = currentSharedData;
+  
+  document.getElementById('sharedTitle').innerText = `🌐 ${escapeHtml(data.catName)}`;
+  document.getElementById('sharedOwnerName').innerText = escapeHtml(data.ownerName);
+  document.getElementById('sharedCardCount').innerText = data.cards.length;
+
+  const isOwner = currentUser && currentUser.uid === data.ownerId;
+  const isFriend = currentUser && data.friends && data.friends.includes(currentUser.uid);
+  const canEdit = isOwner || isFriend;
+
+  document.getElementById('sharedOwnerPanel').style.display = isOwner ? 'block' : 'none';
+  document.getElementById('sharedEditorPanel').style.display = canEdit ? 'block' : 'none';
+
+  // 作成者向け：フレンドリストの描画
+  if (isOwner) {
+    const fList = document.getElementById('sharedFriendsList');
+    fList.innerHTML = '';
+    const friendsArray = data.friends || [];
+    if (friendsArray.length === 0) {
+      fList.innerHTML = '<span style="font-size:0.8rem; color:var(--text3);">許可されたフレンドはいません。</span>';
+    } else {
+      friendsArray.forEach(fUid => {
+        const fDiv = document.createElement('div');
+        fDiv.style.cssText = "display:flex; justify-content:space-between; align-items:center; background:var(--bg3); padding:8px 12px; border-radius:6px; border:1px solid var(--border);";
+        fDiv.innerHTML = `
+          <span style="font-family:monospace; font-size:0.8rem; color:var(--text2); overflow:hidden; text-overflow:ellipsis;">${escapeHtml(fUid)}</span>
+          <button class="btn btn-danger" style="width:auto; padding:4px 10px; font-size:0.75rem;" onclick="removeFriendFromShared('${fUid}')">削除</button>
+        `;
+        fList.appendChild(fDiv);
+      });
+    }
+  }
+
+  // 共有カード一覧の描画
+  const cList = document.getElementById('sharedCardsList');
+  cList.innerHTML = '';
+  if (data.cards.length === 0) {
+    cList.innerHTML = '<div style="color:var(--text3); font-size:0.9rem; text-align:center; padding:20px;">カードがありません</div>';
+  } else {
+    data.cards.forEach((card, idx) => {
+      const cDiv = document.createElement('div');
+      cDiv.className = 'q-card';
+      cDiv.innerHTML = `
+        <div class="q-card-text">${escapeHtml(card.question)}</div>
+        <div style="font-size:0.85rem; color:var(--text2); margin-top:4px;">A: <span style="color:#fff;">${escapeHtml(card.answer)}</span></div>
+        <div style="font-size:0.75rem; color:var(--text3); margin-top:8px;">📂 ${escapeHtml(card.category)}</div>
+        ${canEdit ? `<button class="btn btn-secondary" style="margin-top:10px; padding:4px 10px; font-size:0.8rem; background:rgba(255,79,106,0.1); color:var(--danger); border-color:rgba(255,79,106,0.3);" onclick="deleteCardFromShared(${idx})">🗑️ この問題を削除</button>` : ''}
+      `;
+      cList.appendChild(cDiv);
+    });
+  }
+}
+
+// 共同編集機能
+async function addFriendToShared() {
+  const uid = document.getElementById('txtNewFriendUid').value.trim();
+  if (!uid) return;
+  const newFriends = [...(currentSharedData.friends || [])];
+  if (!newFriends.includes(uid)) newFriends.push(uid);
+  try {
+    await firestore.collection("susuru_anki_shared").doc(currentSharedDocId).update({ friends: newFriends });
+    document.getElementById('txtNewFriendUid').value = '';
+  } catch(e) { alert("⚠️ フレンドの追加に失敗しました。"); }
+}
+
+async function removeFriendFromShared(uid) {
+  if (!confirm("このフレンドの共同編集権限を取り消しますか？")) return;
+  const newFriends = (currentSharedData.friends || []).filter(u => u !== uid);
+  try {
+    await firestore.collection("susuru_anki_shared").doc(currentSharedDocId).update({ friends: newFriends });
+  } catch(e) { alert("⚠️ 権限の取り消しに失敗しました。"); }
+}
+
+async function addCardToShared() {
+  const q = document.getElementById('txtSharedNewQ').value.trim();
+  const a = document.getElementById('txtSharedNewA').value.trim();
+  if (!q || !a) return alert("問題文と答えを入力してください");
+  
+  const newCard = {
+    id: 'id_' + Math.random().toString(36).slice(2) + Date.now().toString(36),
+    question: q, answer: a, category: currentSharedData.catName,
+    level: 0, correct: 0, incorrect: 0, streak: 0, wrongStreak: 0, shikkariStreak: 0
+  };
+  const newCards = [...currentSharedData.cards, newCard];
+  
+  try {
+    await firestore.collection("susuru_anki_shared").doc(currentSharedDocId).update({ cards: newCards });
+    document.getElementById('txtSharedNewQ').value = '';
+    document.getElementById('txtSharedNewA').value = '';
+  } catch(e) { alert("⚠️ クラウドへの追加に失敗しました。"); }
+}
+
+async function deleteCardFromShared(idx) {
+  if (!confirm("クラウド上からこの問題を直接削除しますか？(※復元できません)")) return;
+  const newCards = [...currentSharedData.cards];
+  newCards.splice(idx, 1);
+  try {
+    await firestore.collection("susuru_anki_shared").doc(currentSharedDocId).update({ cards: newCards });
+  } catch(e) { alert("⚠️ 削除に失敗しました。"); }
+}
+
+// ローカルへの取り込み
+function importCurrentShared() {
+  const data = currentSharedData;
+  if (!data) return;
+  if (!confirm(`「${data.catName}」に含まれる全カードを、あなたのアプリに取り込みますか？`)) return;
+
+  (data.categories || []).forEach(c => { if(!categories.includes(c)) categories.push(c); });
+  for (let p in (data.categoryTree || {})) {
+    if (!categoryTree[p]) categoryTree[p] = [];
+    (data.categoryTree[p] || []).forEach(c => { if (!categoryTree[p].includes(c)) categoryTree[p].push(c); });
+  }
+  
+  let count = 0;
+  (data.cards || []).forEach(q => {
+    if (!q.question || !q.answer) return;
+    const exists = db.some(d => normalizeAnswer(d.question) === normalizeAnswer(q.question) && d.category === q.category);
+    if (!exists) {
+      db.push({
+        id: 'id_' + Math.random().toString(36).slice(2) + Date.now().toString(36),
+        question: q.question, answer: q.answer, category: q.category,
+        level: 0, correct: 0, incorrect: 0, streak: 0, wrongStreak: 0, shikkariStreak: 0
+      });
+      count++;
+    }
+  });
+  
+  autoMerge();
+  alert(`✅ 「${data.catName}」をローカルに取り込みました！\n新規追加されたカード: ${count}件`);
+  exitSharedMode();
+}
+
+function exitSharedMode() {
+  if (unsubscribeShared) unsubscribeShared();
+  currentSharedDocId = null;
+  currentSharedData = null;
+  // URLパラメータを除去してホームに戻る
+  const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+  window.history.pushState({path: cleanUrl}, '', cleanUrl);
+  openPage('pgHome');
+}
+
+// ==========================================
+// 🌟 フレンド機能 ＆ チャットシステム
+// ==========================================
+
+let currentChatUnsubscribe = null;
+let currentChatFriendUid = null;
+
+// フレンドを自分のプロフィールに追加
+async function addAppFriend() {
+  const fUid = document.getElementById('txtAddFriendUid').value.trim();
+  if (!fUid) return alert("UIDを入力してください。");
+  if (!currentUser) return alert("ログインが必要です。");
+  if (fUid === currentUser.uid) return alert("自分自身のUIDは登録できません。");
+
+  try {
+    // 相手のユーザーが存在するか確認
+    const fProfSnap = await firestore.collection('susuru_anki_profiles').doc(fUid).get();
+    if (!fProfSnap.exists) return alert("指定したUIDのユーザーは見つかりませんでした。");
+
+    // バッチ処理で自分と相手の両方にIDを追加（相互登録）
+    const batch = firestore.batch();
+    const myRef = firestore.collection('susuru_anki_profiles').doc(currentUser.uid);
+    const fRef = firestore.collection('susuru_anki_profiles').doc(fUid);
+
+    batch.set(myRef, { friends: firebase.firestore.FieldValue.arrayUnion(fUid) }, { merge: true });
+    batch.set(fRef, { friends: firebase.firestore.FieldValue.arrayUnion(currentUser.uid) }, { merge: true });
+
+    await batch.commit();
+
+    document.getElementById('txtAddFriendUid').value = '';
+    alert("✅ フレンドを相互登録しました！");
+    loadAppFriends();
+  } catch (e) {
+    console.error(e);
+    alert("⚠️ フレンド追加に失敗しました。" + e.message);
+  }
+}
+
+// フレンド一覧の読み込み・描画
+async function loadAppFriends() {
+  const listDiv = document.getElementById('appFriendsList');
+  listDiv.innerHTML = '<p style="color:var(--text3); font-size:0.8rem; text-align:center; padding:20px;">読み込み中...</p>';
+  if (!currentUser) {
+    listDiv.innerHTML = '<p style="color:var(--danger); font-size:0.85rem; text-align:center; padding:20px;">ログインしてください</p>';
+    return;
+  }
+
+  try {
+    const myProfileSnap = await firestore.collection('susuru_anki_profiles').doc(currentUser.uid).get();
+    const friends = myProfileSnap.exists ? (myProfileSnap.data().friends || []) : [];
+
+    if (friends.length === 0) {
+      listDiv.innerHTML = '<p style="color:var(--text3); font-size:0.85rem; text-align:center; padding:20px;">登録されているフレンドはいません。</p>';
+      return;
     }
 
-    // 初回実行
-    init();
+    listDiv.innerHTML = '';
+// loadAppFriends 内の for ループ部分を修正
+for (const fUid of friends) {
+  try {
+    const fProfSnap = await firestore.collection('susuru_anki_profiles').doc(fUid).get();
+    const fName = fProfSnap.exists ? fProfSnap.data().displayName : '未登録ユーザー';
+
+    const div = document.createElement('div');
+    div.className = 'achieve-row';
+    div.innerHTML = `
+      <div class="achieve-label">👤 ${escapeHtml(fName)}</div>
+      <button class="btn" style="width:auto; padding:6px 12px; font-size:0.8rem; background:var(--primary);" onclick="openChat('${fUid}', '${escapeHtml(fName)}')">💬 チャット</button>
+    `;
+    listDiv.appendChild(div);
+  } catch (err) {
+    console.error("フレンド情報の取得エラー:", err);
+    // エラーが起きても他のフレンドの表示を邪魔しないようにする
+  }
+}
+  }
+}
+
+// チャットルームのIDを生成 (UID同士をアルファベット順にして結合)
+function getChatId(uid1, uid2) {
+  return [uid1, uid2].sort().join('_');
+}
+
+// チャットを開く
+function openChat(friendUid, friendName) {
+  document.getElementById('friendsListArea').style.display = 'none';
+  document.getElementById('chatArea').style.display = 'flex';
+  document.getElementById('chatWithTitle').innerText = friendName + " とのチャット";
+  currentChatFriendUid = friendUid;
+
+  const chatId = getChatId(currentUser.uid, friendUid);
+  const msgBox = document.getElementById('chatMessages');
+  msgBox.innerHTML = '<div style="color:var(--text3); text-align:center; font-size:0.8rem;">履歴を取得中...</div>';
+
+  if (currentChatUnsubscribe) currentChatUnsubscribe();
+
+  // リアルタイムでメッセージを受信
+  currentChatUnsubscribe = firestore.collection('susuru_anki_chats').doc(chatId).collection('messages')
+    .orderBy('timestamp', 'asc')
+    .onSnapshot(snap => {
+      msgBox.innerHTML = '';
+      if (snap.empty) {
+        msgBox.innerHTML = '<div style="color:var(--text3); text-align:center; font-size:0.8rem; margin-top:20px;">まだメッセージがありません。<br>挨拶してみましょう！</div>';
+      }
+      snap.forEach(doc => {
+        const data = doc.data();
+        const isMe = data.senderId === currentUser.uid;
+        
+        const wrap = document.createElement('div');
+        wrap.style.cssText = `display:flex; flex-direction:column; max-width:80%; ${isMe ? 'align-self:flex-end;' : 'align-self:flex-start;'}`;
+        
+        const bubble = document.createElement('div');
+        bubble.style.cssText = `padding:10px 14px; border-radius:14px; font-size:0.9rem; line-height:1.4; word-break:break-all; ${isMe ? 'background:var(--primary); color:#fff; border-bottom-right-radius:2px;' : 'background:var(--bg3); border:1px solid var(--border); color:var(--text); border-bottom-left-radius:2px;'}`;
+        bubble.innerText = data.text;
+        
+        wrap.appendChild(bubble);
+        msgBox.appendChild(wrap);
+      });
+      // スクロールを一番下へ
+      msgBox.scrollTop = msgBox.scrollHeight;
+    });
+}
+
+// チャットを閉じる
+function closeChat() {
+  if (currentChatUnsubscribe) { currentChatUnsubscribe(); currentChatUnsubscribe = null; }
+  document.getElementById('chatArea').style.display = 'none';
+  document.getElementById('friendsListArea').style.display = 'flex';
+  currentChatFriendUid = null;
+}
+
+// メッセージを送信
+async function sendChatMessage() {
+  const input = document.getElementById('txtChatInput');
+  const text = input.value.trim();
+  if (!text || !currentChatFriendUid) return;
+
+  const chatId = getChatId(currentUser.uid, currentChatFriendUid);
+  try {
+    await firestore.collection('susuru_anki_chats').doc(chatId).collection('messages').add({
+      text: text,
+      senderId: currentUser.uid,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    input.value = '';
+  } catch (e) {
+    console.error(e);
+    alert("⚠️ 送信エラーが発生しました。");
+  }
+}
+
+function escapeHtml(s) {
+  if(!s) return '';
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+}
 </script>
-
 </body>
 </html>
