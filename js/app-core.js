@@ -1,8 +1,3 @@
-alert("JS読み込み成功！");
-console.log("JS読み込み成功！");
-
-console.log("アプリの読み込みが始まりました！");
-
 // ★Firebase 初期化 (ご自身のConfigに置き換えてください)
 const firebaseConfig = {
   apiKey: "AIzaSyAGoYBRoupEFHng_cXoiHmZf9eAlX8ZCHA", authDomain: "susuruanki.firebaseapp.com",
