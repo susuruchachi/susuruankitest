@@ -1,3 +1,7 @@
+// クイズの判定やサブセット作成などの関数だけを置く
+function normalizeAnswer(str) { ... }
+function isAnswerCorrect(input, correctAnswer) { ... }
+// ... クイズに関係する関数だけを置く ...
 function normalizeAnswer(str) {
   if(!str) return ''; let s = String(str).replace(/[Ａ-Ｚａ-ｚ０-９]/g, c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).toLowerCase().trim(); s = s.replace(/擦/g, 'こす');
   s = s.replace(/[、，＼＼ \u3000]+/g, ','); return s.split(',').map(x=>x.trim()).filter(x=>x!=='').sort().join(',');
