@@ -1,3 +1,24 @@
+// 全ての読み込みが終わった後に実行する「唯一の」起動処理
+window.addEventListener('DOMContentLoaded', () => {
+    console.log("初期化開始");
+    
+    // 1. 基本データの読み込み
+    loadData(); 
+    ensureSystemSanity(); 
+    autoMerge();
+    buildQuizScopeDropdown();
+    
+    // 2. 画面の初期表示
+    if(localStorage.getItem('theme_light')==='true') toggleLightMode(true);
+    openPage('pgHome');
+    
+    console.log("初期化完了！");
+});
+
+// その他のUI操作関数をここに書く
+function toggleLightMode(forceOn) { ... }
+function openPage(pageId) { ... }
+// ...
 window.onload = function() {
   loadData(); ensureSystemSanity(); autoMerge(); buildQuizScopeDropdown(); 
   if(localStorage.getItem('theme_light')==='true') toggleLightMode(true);
