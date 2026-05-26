@@ -160,29 +160,7 @@ body.light-mode .sync-status { background: rgba(255,255,255,0.9); }
 <script src="js/app-core.js"></script>
     <script src="js/quiz-engine.js"></script>
     <script src="js/ui-render.js"></script>   
-    ```
 
-### 2. 各ファイルの中身をこう整理してください
-
-#### ① app-core.js（土台・変数管理）
-ここは「変数定義」と「基本関数」だけにします。**起動処理（`window.onload`）はここに書かないでください。**
-
-```javascript
-// Firebase初期化など
-const firebaseConfig = { ... };
-if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth(); const firestore = firebase.firestore();
-
-// グローバル変数の定義（すべてのファイルで共通で使うもの）
-let db = [], currentUser = null;
-// ... 他の変数定義もここにすべて集約 ...
-
-// 基本的なデータ操作関数だけを置く
-function loadData() { ... }
-function saveData() { ... }
-function autoMerge() { ... }
-// ... 初期化系の関数をここに置く ...
-    
 </body>
 </body>
 </html>
