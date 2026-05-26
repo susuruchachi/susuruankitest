@@ -1146,3 +1146,32 @@ function ensureSystemSanity() { ... }
 window.addEventListener('DOMContentLoaded', () => {
     // （省略）初期化のコード
 });
+window.addEventListener('DOMContentLoaded', () => {
+    console.log("【起動】全ファイルの読み込み完了");
+
+    // 1. Firebase初期化（念のため）
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+
+    // 2. データの読み込み
+    loadData();
+    ensureSystemSanity();
+    autoMerge();
+    buildQuizScopeDropdown();
+
+    // 3. UIの初期設定
+    if(localStorage.getItem('theme_light') === 'true') {
+        toggleLightMode(true);
+    }
+
+    // ★重要：強制的にメイン画面を表示する
+    // これが真っ黒を解消する「鍵」です
+    const homeScreen = document.getElementById('pgHome');
+    if (homeScreen) {
+        homeScreen.style.display = 'flex';
+        homeScreen.classList.add('active');
+    }
+
+    console.log("【起動】UI描画を実行");
+});
